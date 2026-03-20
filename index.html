@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>720全景漫游长廊</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; margin: 0; padding: 0; }
+        /* 顶部导航栏样式 */
+        .header { background: #fff; padding: 15px 50px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .btn-create { background: #ff7000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+
+        /* 瀑布流/网格展示区 */
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 40px 50px; }
+
+        /* 作品卡片样式 */
+        .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.2s; cursor: pointer; }
+        .card:hover { transform: translateY(-5px); }
+        .card-img { width: 100%; height: 180px; object-fit: cover; background: #ddd; }
+        .card-info { padding: 15px; }
+        .card-title { margin: 0 0 5px 0; font-size: 16px; color: #333; }
+        .card-time { margin: 0; font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h2>🌌 发现全景世界</h2>
+    <div>
+        <a href="/my.html" class="btn-create" style="background: #eee; color: #333; margin-right: 15px;">👤 我的作品</a>
+        <a href="/editor.html" class="btn-create">进入工作台开始创作</a>
+    </div>
+</div>
+
+<div class="gallery" id="gallery">
+    <p style="color:#999;">正在加载全景世界...</p>
+</div>
+
+<script>
+    // 加载所有场景并在主页展示
+    async function loadGallery() {
+        const gallery = document.getElementById('gallery');
+        try {
+            const res = await fetch('/api/scenes');
+            const data = await res.json();
+
+            // 如果数据库里没有作品
+            if(!data.success || data.scenes.length === 0) {
+                gallery.innerHTML = '<p style="color:#999;">还没有作品，快点击右上角去创作吧！</p>';
+                return;
+            }
+
+            // 循环渲染卡片
+            gallery.innerHTML = data.scenes.map(scene => `
+                    <div class="card" onclick="window.open('/view.html?id=${scene.id}', '_blank')">
+                        <img src="${scene.image_url}" class="card-img" alt="封面图">
+                        <div class="card-info">
+                            <h3 class="card-title">${scene.title || '未命名作品'}</h3>
+                            <p class="card-time">场景 ID: ${scene.id}</p>
+                        </div>
+                    </div>
+                `).join('');
+
+        } catch (error) {
+            console.error("加载长廊失败:", error);
+            gallery.innerHTML = '<p style="color:red;">获取作品列表失败，请检查服务器后端接口。</p>';
+        }
+    }
+
+    // 页面打开时自动执行加载
+    loadGallery();
+</script>
+</body>
+</html>

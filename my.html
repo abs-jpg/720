@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的全景作品</title>
+    <style>
+        body { font-family: sans-serif; background: #f5f7fa; margin: 0; }
+        .header { background: #fff; padding: 15px 50px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 40px 50px; }
+        .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-img { width: 100%; height: 180px; object-fit: cover; background: #ddd; }
+        .card-info { padding: 15px; }
+        .card-title { margin: 0 0 15px 0; font-size: 16px; color: #333; }
+        .actions { display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px; }
+        .btn { padding: 5px 15px; border-radius: 4px; cursor: pointer; border: none; font-size: 13px; text-decoration: none; text-align: center; }
+        .btn-edit { background: #3478f6; color: white; }
+        .btn-del { background: #ff4d4f; color: white; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h2>👤 我的创作空间</h2>
+    <a href="/" style="color: #3478f6; text-decoration: none; font-weight: bold;">返回长廊主页</a>
+</div>
+
+<div class="gallery" id="myGallery">
+    <p style="color:#999; padding-left: 50px;">正在加载您的作品...</p>
+</div>
+
+<script>
+    // 从本地缓存获取属于“我”的作品 ID 列表
+    let myWorks = JSON.parse(localStorage.getItem('myPanoWorks') || '[]');
+
+    async function loadMyGallery() {
+        const gallery = document.getElementById('myGallery');
+        if (myWorks.length === 0) {
+            gallery.innerHTML = '<p style="color:#999; padding-left: 50px;">您还没有创作任何作品，快去工作台上传吧！</p>';
+            return;
+        }
+
+        // 发送给后端请求这些特定 ID 的数据
+        const res = await fetch('/api/my-scenes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: myWorks })
+        });
+        const data = await res.json();
+
+        gallery.innerHTML = data.scenes.map(scene => `
+                <div class="card" id="scene-card-${scene.id}">
+                    <img src="${scene.image_url}" class="card-img" alt="封面图" onclick="window.open('/view.html?id=${scene.id}', '_blank')" style="cursor:pointer;">
+                    <div class="card-info">
+                        <h3 class="card-title">${scene.title || '未命名作品'} (ID: ${scene.id})</h3>
+                        <div class="actions">
+                            <a href="/editor.html?editId=${scene.id}" class="btn btn-edit">进入编辑</a>
+                            <button onclick="deleteScene(${scene.id})" class="btn btn-del">永久删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    window.deleteScene = async (id) => {
+        if(!confirm("确定要永久删除这个作品吗？主页和其他相关联的跳转也会失效哦！")) return;
+
+        // 请求后端删除
+        await fetch(`/api/scenes/${id}`, { method: 'DELETE' });
+
+        // 从本地缓存中移除
+        myWorks = myWorks.filter(workId => workId !== id);
+        localStorage.setItem('myPanoWorks', JSON.stringify(myWorks));
+
+        // 刷新列表
+        loadMyGallery();
+        alert('删除成功！');
+    };
+
+    loadMyGallery();
+</script>
+</body>
+</html>

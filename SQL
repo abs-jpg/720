@@ -1,0 +1,20 @@
+-- 1. 场景表（存储全景图）
+CREATE TABLE `scenes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `image_url` varchar(255) NOT NULL COMMENT '图片路径',
+  `create_time` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. 热点标记表（存储坐标和信息）
+CREATE TABLE `markers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `scene_id` int(11) NOT NULL COMMENT '关联的场景ID',
+  `yaw` double NOT NULL COMMENT '水平偏角',
+  `pitch` double NOT NULL COMMENT '垂直偏角',
+  `title` varchar(100) NOT NULL COMMENT '标记名称',
+  `description` text COMMENT '详细数据',
+  `target_scene_id` int(11) DEFAULT NULL COMMENT '如果是跳转箭头，这里填目标场景ID',
+  PRIMARY KEY (`id`),
+  KEY `idx_scene` (`scene_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

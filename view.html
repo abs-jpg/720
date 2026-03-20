@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全景漫游体验</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; color: #fff; font-family: sans-serif; }
+        #viewer { width: 100vw; height: 100vh; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; z-index: 999; color: #ccc; }
+
+        /* 高级悬浮展示窗样式 */
+        .info-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .info-modal { background: #222; padding: 0; border-radius: 12px; width: 340px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); border: 1px solid #444; overflow: hidden; animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        .info-header { background: #2d2d2d; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
+        .info-header h3 { margin: 0; font-size: 18px; color: #fff; }
+        .close-btn { cursor: pointer; font-size: 24px; color: #888; transition: 0.2s; line-height: 1; }
+        .close-btn:hover { color: #fff; transform: scale(1.1); }
+        .info-body { padding: 25px 20px; color: #ddd; font-size: 15px; line-height: 1.6; min-height: 80px; }
+
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body>
+<div id="loading">正在加载全景场景，请稍候...</div>
+<div id="viewer"></div>
+
+<div class="info-modal-overlay" id="infoModal">
+    <div class="info-modal">
+        <div class="info-header">
+            <h3 id="modalTitle">标题</h3>
+            <div class="close-btn" onclick="closeInfoModal()">×</div>
+        </div>
+        <div class="info-body" id="modalDesc">描述内容</div>
+    </div>
+</div>
+
+<script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three/build/three.module.js", "@photo-sphere-viewer/core": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js", "@photo-sphere-viewer/markers-plugin": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js" } }
+</script>
+
+<script type="module">
+    import { Viewer } from '@photo-sphere-viewer/core';
+    import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const sceneId = urlParams.get('id');
+
+    window.closeInfoModal = () => { document.getElementById('infoModal').style.display = 'none'; };
+
+    async function init() {
+        if(!sceneId) return document.getElementById('loading').innerHTML = "错误：缺少场景 ID参数";
+        try {
+            const res = await fetch(`/api/scenes/${sceneId}`);
+            const data = await res.json();
+
+            if (!data.success) return document.getElementById('loading').innerHTML = "错误：场景加载失败";
+            document.getElementById('loading').style.display = 'none';
+
+            const markers = data.markers.map(m => {
+                const isArrow = m.target_scene_id !== null && m.target_scene_id !== 0;
+                return {
+                    id: `marker-${m.id}`, position: { yaw: m.yaw, pitch: m.pitch },
+                    html: isArrow ? `<div style="font-size: 40px; text-shadow: 0 0 10px white; cursor: pointer; animation: float 1.5s infinite ease-in-out;">⬆️</div>` : `<div style="font-size: 30px; text-shadow: 0 0 5px white; cursor: pointer;">📍</div>`,
+                    tooltip: { content: `<div style="background:rgba(0,0,0,0.8);color:#fff;padding:8px;border-radius:4px;"><b>${m.title}</b></div>` },
+                    data: { isArrow, target: m.target_scene_id, desc: m.description, title: m.title }
+                };
+            });
+
+            const viewer = new Viewer({ container: document.querySelector('#viewer'), panorama: data.scene.image_url, defaultZoomLvl: 0, plugins: [ [MarkersPlugin, { markers }] ] });
+
+            const style = document.createElement('style');
+            style.innerHTML = `@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }`;
+            document.head.appendChild(style);
+
+            const markersPlugin = viewer.getPlugin(MarkersPlugin);
+            markersPlugin.addEventListener('select-marker', ({ marker }) => {
+                if(marker.data.isArrow) {
+                    viewer.animate({ yaw: marker.config.position.yaw, pitch: marker.config.position.pitch, zoom: 80, speed: 1000 }).then(() => {
+                        if (marker.data.target) {
+                            document.getElementById('loading').style.display = 'block';
+                            document.getElementById('loading').innerHTML = "正在前往下一场景...";
+                            window.location.href = `/view.html?id=${marker.data.target}`;
+                        }
+                    });
+                } else {
+                    // 弹出高级信息窗口
+                    document.getElementById('modalTitle').innerText = marker.data.title;
+                    document.getElementById('modalDesc').innerText = marker.data.desc || '暂无详细介绍';
+                    document.getElementById('infoModal').style.display = 'flex';
+                }
+            });
+        } catch (error) { document.getElementById('loading').innerHTML = "系统出错，请检查网络。"; }
+    }
+    init();
+</script>
+</body>
+</html>
