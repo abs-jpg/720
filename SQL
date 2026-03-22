@@ -1,20 +1,24 @@
--- 1. 场景表（存储全景图）
-CREATE TABLE `scenes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `image_url` varchar(255) NOT NULL COMMENT '图片路径',
-  `create_time` timestamp DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 1. 创建全景项目主表
+CREATE TABLE IF NOT EXISTS scenes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    image_url VARCHAR(255) NOT NULL COMMENT '图片存储路径',
+    title VARCHAR(100) DEFAULT '未命名全景项目' COMMENT '项目/房间名称',
+    owner_id VARCHAR(100) DEFAULT NULL COMMENT '前端LocalStorage认领的创作者ID',
+    parent_id INT DEFAULT NULL COMMENT '如果不为空，说明是某个主项目的副房间',
+    status VARCHAR(20) DEFAULT 'published' COMMENT '作品状态(暂预留)',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. 热点标记表（存储坐标和信息）
-CREATE TABLE `markers` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `scene_id` int(11) NOT NULL COMMENT '关联的场景ID',
-  `yaw` double NOT NULL COMMENT '水平偏角',
-  `pitch` double NOT NULL COMMENT '垂直偏角',
-  `title` varchar(100) NOT NULL COMMENT '标记名称',
-  `description` text COMMENT '详细数据',
-  `target_scene_id` int(11) DEFAULT NULL COMMENT '如果是跳转箭头，这里填目标场景ID',
-  PRIMARY KEY (`id`),
-  KEY `idx_scene` (`scene_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 2. 创建热点标记表
+CREATE TABLE IF NOT EXISTS markers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    scene_id INT NOT NULL COMMENT '属于哪张照片',
+    yaw FLOAT NOT NULL COMMENT '经度坐标',
+    pitch FLOAT NOT NULL COMMENT '纬度坐标',
+    title VARCHAR(100) NOT NULL COMMENT '标记短标题',
+    description TEXT COMMENT '如果是信息点，存放长描述',
+    target_scene_id INT DEFAULT NULL COMMENT '如果是跳转箭头，存放目标房间ID',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
