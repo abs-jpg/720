@@ -1,124 +1,54 @@
-# 🌌 720 全景漫游平台
+# 🌌 Spatial Interface - Eidos (720VR Creator)
 
-一个基于 Web 的 720° 全景图漫游创作与展示平台。用户可以上传全景图片，在场景中添加信息标记和跳转箭头，实现多房间之间的互动漫游体验。
-
-![城市全景](城市.jpg)
-![房子全景](房子.jpg)
-![村子全景](村子.jpg)
+**Spatial Interface - Eidos** 是一个基于 WebGL 的商业级全景漫游与空间交互平台。
+它提供了一套完整的前后端分离解决方案，包含面向创作者的**全景编辑器 (Creator)** 和面向最终用户的**沉浸式播放器 (Viewer)**。支持零代码生成全景漫游项目、自定义空间热点、无缝场景切换以及高级毛玻璃交互 UI。
 
 ---
 
-## 📁 项目文件说明
+## ✨ 核心特性 (Key Features)
 
-### 🖥️ 后端服务
+### 🎨 创作者工作台 (Editor)
+* **零代码漫游搭建**：支持直传 4K/8K 全景图片，自动生成项目层级（主场景与副房间）。
+* **可视化打点系统**：在 3D 空间内点击即可生成热点，支持二次拖拽移动与精准定位。
+* **双热点类型**：
+  * `导航跳转点`：用于不同房间/场景之间的漫游走向指示。
+  * `图文信息点`：用于展示空间内物品的详细文字描述。
+* **实时草稿与多语言**：未命名项目自动标记为“草稿”，支持中英文界面一键切换。
 
-> **`server.js`** — Node.js + Express 后端 API 服务
->
-> 提供图片上传、场景 CRUD、标记管理等 9 个 RESTful 接口，使用 MySQL 持久化存储
+### 🚀 沉浸式展示端 (Viewer)
+* **SPA 无缝秒切**：打破传统网页刷新的束缚，利用底层引擎 API 实现场景间的无缝平滑过渡（Zero-refresh），配合浏览器缓存实现“秒切”。
+* **定制级高级 UI**：
+  * **毛玻璃场景坞 (Bottom Dock)**：原生质感的底部缩略图导航栏，实时高亮当前位置，支持点击无缝穿越。
+  * **定制热点图标**：采用“动态飞鸟箭头”指示空间走向，采用“发光玻璃圆圈”指示信息详情。
+  * **沉浸式信息弹窗**：废弃浏览器原生 Alert，采用自研暗色毛玻璃 Modal，支持鼠标滚轮长文丝滑滚动。
+* **极速下载引擎**：内置强制 Fetch 转 Blob 机制，支持绕过浏览器预览，直接一键下载全景原图，并配有状态提示。
 
-> **`package.json`** — 项目依赖配置
->
-> 依赖：express · multer · cors · mysql2
-
-### 🎨 前端页面
-
-> **`index.html`** — 🏛️ 长廊主页
->
-> 卡片瀑布流布局，展示所有已发布的全景作品，点击即可进入沉浸式漫游
-
-> **`editor.html`** — ✏️ 全景创作工作台
->
-> 上传主/副场景全景图，双击画面打点添加信息标记或场景跳转箭头，支持多房间切换编辑
-
-> **`view.html`** — 👁️ 全景漫游体验
->
-> 访客沉浸式浏览 720° 全景，点击 📍 查看信息，点击 ⬆️ 跳转至其他房间
-
-> **`my.html`** — 👤 我的作品管理
->
-> 基于 localStorage 记录创作历史，支持重新编辑和永久删除
-
-### 🗄️ 数据库
-
-> **`SQL`** — 建表脚本
->
-> 包含 `scenes` 场景表 和 `markers` 热点标记表，MySQL InnoDB 引擎，utf8mb4 编码
-
-### 🖼️ 示例素材
-
-> **`城市.jpg`** · **`房子.jpg`** · **`村子.jpg`**
->
-> 三张示例全景照片，开箱即用，上传后即可体验完整的漫游创作流程
+### ⚡ 极致性能优化
+* 接入 `fastly.jsdelivr.net` 国内加速节点，核心引擎秒级加载，告别白屏。
+* 物理文件与数据库级联粉碎删除，拒绝服务器垃圾数据残留。
+* 支持静态资源长效缓存 (`maxAge: 30d`)，极大降低重复加载带宽。
 
 ---
 
-## 🛠️ 技术栈
+## 🛠️ 技术栈 (Tech Stack)
 
-- 后端：Node.js + Express + MySQL
-- 前端：原生 HTML/CSS/JS（无框架）
-- 全景渲染：[Photo Sphere Viewer](https://photo-sphere-viewer.js.org/)（基于 Three.js）
-- 文件上传：Multer
-- 数据库驱动：mysql2
-
----
-
-## 🚀 快速开始
-
-**1. 安装依赖**
-
-```bash
-npm install
-```
-
-**2. 导入数据库（MySQL）**
-
-```sql
-CREATE DATABASE vr_pano;
-USE vr_pano;
--- 然后执行 SQL 文件中的建表语句
-```
-
-**3. 修改数据库配置**
-
-编辑 `server.js` 中的连接信息：
-
-```js
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'root',
-  password: '你的密码',
-  database: 'vr_pano'
-};
-```
-
-**4. 启动服务**
-
-```bash
-npm start
-```
-
-**5. 打开浏览器访问**
-
-```
-http://localhost:3000
-```
+* **前端 (Frontend)**：HTML5, CSS3, ES6 JavaScript, [Photo Sphere Viewer (基于 Three.js)](https://photo-sphere-viewer.js.org/)
+* **后端 (Backend)**：Node.js, Express.js
+* **数据库 (Database)**：MySQL 8.0+
+* **文件处理**：Multer (本地存储)
 
 ---
 
-## 📡 API 接口一览
+## 📁 核心目录结构
 
-| 方法 | 路径 | 功能 |
-|------|------|------|
-| `POST` | `/api/upload` | 上传全景图片（支持主/副场景） |
-| `GET` | `/api/scenes` | 获取所有主场景列表 |
-| `GET` | `/api/scenes/:id` | 获取单个场景详情及其标记 |
-| `GET` | `/api/scenes/:id/subs` | 获取主场景下的所有副场景 |
-| `PUT` | `/api/scenes/:id` | 更新场景标题 |
-| `POST` | `/api/scenes/:id/markers` | 添加热点标记 |
-| `DELETE` | `/api/markers/:id` | 删除单个标记 |
-| `POST` | `/api/my-scenes` | 根据 ID 列表获取我的作品 |
-| `DELETE` | `/api/scenes/:id` | 删除场景（级联删除副场景、标记及文件） |
-
----
-
-
+```text
+├── frontend/                 # 网站前端（部署于 Nginx 等 Web 服务器）
+│   ├── index.html            # 创作者工作台 (全景编辑器)
+│   └── view.html             # 观众展示页 (纯净全景播放器)
+│
+├── backend/                  # API 后端服务
+│   ├── server.js             # Node.js 核心逻辑与 API 路由
+│   ├── package.json          # 后端依赖配置
+│   └── uploads/              # 用户上传的全景图实体文件存放区
+│
+└── database.sql              # MySQL 数据库建表文件
