@@ -2,34 +2,19 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>720VR Creator - 创作者工作台</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css">
+    <title>Spatial Interface - Eidos</title>
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css">
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css">
     <style>
-        /* ================= 1. 全局配置 & 主题色 ================= */
-        :root {
-            --primary-color: #3478f6;
-            --primary-hover: #2868d6;
-            --bg-color: #f6f8fc;
-            --text-color: #333;
-            --badge-draft-bg: #f1f3f5;
-            --badge-draft-text: #868e96;
-            --sidebar-bg: #fff;
-            --border-color: #e9ecef;
-        }
-
+        :root { --primary-color: #3478f6; --primary-hover: #2868d6; --bg-color: #f6f8fc; --text-color: #333; --badge-draft-bg: #f1f3f5; --badge-draft-text: #868e96; --sidebar-bg: #fff; --border-color: #e9ecef; }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; color: var(--text-color); overflow-x: hidden; }
 
-        /* ================= 2. 顶部导航栏 ================= */
         .header { background-color: #fff; padding: 0px 50px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 15px rgba(0,0,0,0.03); height: 70px; border-bottom: 1px solid #eee; position: relative; z-index: 100; }
-
         .nav-links { display: flex; gap: 10px; align-items: center; height: 100%; }
         .logo { font-size: 20px; font-weight: bold; color: #111; letter-spacing: 0.5px; }
-
         .header-right { display: flex; align-items: center; gap: 25px; }
         .lang-select { background: #f8f9fa; border: 1px solid var(--border-color); color: #555; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; outline: none; transition: all 0.2s; appearance: none; }
         .lang-select:hover, .lang-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(52,120,246,0.1); background: #fff; }
-
         .nav-link { position: relative; display: flex; align-items: center; height: 100%; padding: 0 20px; color: #666; font-size: 15px; font-weight: 500; transition: color 0.3s ease; cursor: pointer; background: transparent; border: none; outline: none; }
         .nav-link .underline { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 0%; height: 3px; background-color: var(--primary-color); transition: width 0.3s ease; }
         .nav-link:hover { color: var(--primary-color); }
@@ -37,107 +22,92 @@
         .nav-link.active { color: var(--primary-color); }
         .nav-link.active .underline { width: 100%; }
 
-        /* ================= 3. 视图容器 ================= */
         #galleryView { display: block; }
         #editorView { display: none; height: calc(100vh - 70px); flex-direction: row; }
 
-        /* ================= 4. 长廊与我的作品视图 ================= */
         .page-header-container { padding: 40px 50px 10px 50px; background-color: var(--bg-color); }
         .discover-title { margin: 0; font-size: 26px; font-weight: 600; color: #333; }
-
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; padding: 20px 50px 50px 50px; }
         .card { background-color: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; border: 1px solid #f0f0f0; position: relative; }
         .card:hover { transform: translateY(-6px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-
         .card-img-container { position: relative; width: 100%; height: 200px; overflow: hidden; }
         .card-img { width: 100%; height: 100%; object-fit: cover; background-color: #eee; transition: transform 0.3s ease; }
         .card:hover .card-img { transform: scale(1.03); }
-
         .card-info { padding: 20px; display: flex; flex-direction: column; align-items: flex-start; }
         .card-title { margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #333; line-height: 1.3; }
-
         .badge { font-size: 13px; font-weight: bold; padding: 5px 14px; border-radius: 20px; margin-bottom: 12px; display: inline-block; }
         .badge-published { background-color: var(--primary-color); color: white; border: none; }
         .badge-draft { background-color: #10b981; color: white; border: none;}
         .card-time { margin: 0; font-size: 13px; color: #999; }
-
         .card-overlay-actions { position: absolute; bottom: -50px; left: 0; width: 100%; height: 50px; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; gap: 15px; transition: bottom 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); z-index: 10; }
         .card:hover .card-overlay-actions { bottom: 0; }
-
         .card-btn { padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; transition: all 0.2s; }
         .card-btn:active { transform: scale(0.95); }
         .btn-edit-card { background-color: var(--primary-color); color: white; }
         .btn-edit-card:hover { background-color: var(--primary-hover); }
         .btn-delete-card { background-color: #ef4444; color: #fff; }
         .btn-delete-card:hover { background-color: #dc2626; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
-
         .loading-msg { color: #999; padding-left: 50px; font-size: 15px; }
 
-        /* ================= 5. 编辑器视图 (Editor) - 核心白屏修复点 ================= */
         .main-content { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; background: #e9ecef; }
-
-        /* 【高级 WebGL 渲染修复】：
-           我们不能用 display: none 隐藏画布，会导致尺寸归零引发奔溃。
-           必须用 opacity 和 visibility 进行视觉隐藏，保留其物理尺寸占位！
-        */
         #viewer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
         #viewer.active { opacity: 1; pointer-events: auto; }
-
         .upload-box { text-align: center; color: #555; background: #fff; padding: 50px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); z-index: 10; border: 1px dashed #ccc;}
         .upload-btn { background: var(--primary-color); color: white; border: none; padding: 12px 25px; cursor: pointer; border-radius: 6px; font-size: 15px; margin-top: 15px; font-weight: bold;}
-
         #sidebar { width: 340px; background: var(--sidebar-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 10; box-shadow: -5px 0 20px rgba(0,0,0,0.03); }
-
         .tab-header { display: flex; border-bottom: 1px solid var(--border-color); padding: 0 15px;}
         .tab-btn { flex: 1; padding: 18px 0; background: transparent; border: none; cursor: pointer; font-size: 14px; color: #666; font-weight: 600; position: relative; transition: 0.2s;}
         .tab-btn:hover { color: var(--primary-color); }
         .tab-btn.active { color: var(--primary-color); }
         .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background-color: var(--primary-color); }
-
         .tab-content { flex: 1; padding: 25px; overflow-y: auto; }
         .panel-container { display: none; }
         .panel-container.active { display: block; }
-
         .panel-group { margin-bottom: 22px; }
         .panel-group label { display: block; margin-bottom: 8px; font-size: 13px; color: #555; font-weight: 600;}
         .panel-group input[type="text"], .panel-group textarea, .panel-group select { width: 100%; background: #fff; border: 1px solid #ddd; color: #333; padding: 10px 12px; border-radius: 6px; box-sizing: border-box; font-size: 14px; transition: border-color 0.2s;}
         .panel-group input:focus, .panel-group textarea:focus, .panel-group select:focus { border-color: var(--primary-color); outline: none; }
         .panel-group textarea { resize: vertical; height: 80px; }
-
         .pro-btn { background-color: var(--primary-color); color: white; border: none; padding: 12px; width: 100%; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 14px; margin-bottom: 10px; transition: 0.2s;}
         .pro-btn:hover { background-color: var(--primary-hover); }
         .btn-outline { background-color: transparent; color: var(--primary-color); border: 1px solid var(--primary-color); }
         .btn-outline:hover { background-color: #f0f4ff; }
         .btn-danger { background-color: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
         .btn-danger:hover { background-color: #fee2e2; }
-
         .thumb-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;}
         .thumb-item { width: 85px; height: 60px; border-radius: 6px; border: 2px solid transparent; background-size: cover; background-position: center; position: relative; cursor: pointer; opacity: 0.7; }
         .thumb-item:hover { opacity: 1; border-color: #ddd; }
         .thumb-item.active { border-color: var(--primary-color); opacity: 1; }
         .thumb-item span { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); font-size: 10px; text-align: center; padding: 3px; color: white;}
         .badge-main { position: absolute; top: -6px; right: -6px; background: #f59e0b; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; z-index: 5;}
-
         #editingBar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.95); padding: 8px 20px; border-radius: 30px; font-size: 14px; color: #333; z-index: 10; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-weight: 500;}
         #placementTip { display: none; background-color: var(--primary-color); color: white; padding: 10px 20px; border-radius: 30px; font-size: 14px; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; box-shadow: 0 4px 15px rgba(52, 120, 246, 0.4); animation: pulse 2s infinite;}
 
-        /* ================= 6. 自定义专业热点 UI ================= */
-        .marker-custom {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.95);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            border: 2px solid var(--primary-color);
-            box-sizing: border-box;
-        }
-        .marker-custom:hover { transform: scale(1.15); box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
-        .marker-info::after { content: 'i'; color: var(--primary-color); font-weight: 900; font-size: 16px; font-style: italic; }
-        .marker-arrow { border-color: #f59e0b; }
-        .marker-arrow::after { content: '↑'; color: #f59e0b; font-weight: 900; font-size: 18px; }
-        .marker-temp { background: rgba(52, 120, 246, 0.2); border: 2px dashed var(--primary-color); animation: tempPulse 1.5s infinite; }
-        .marker-temp::after { content: '+'; color: var(--primary-color); font-weight: 900; font-size: 20px; }
+        /* ================= 6. 高级空间热点分类 UI ================= */
+        .marker-custom-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; pointer-events: none; }
+        .marker-label { background: rgba(0, 0, 0, 0.6); color: #fff; padding: 5px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 8px; white-space: nowrap; pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: background 0.2s; border: 1px solid rgba(255,255,255,0.2); }
+        .marker-custom-wrapper:hover .marker-label { background: var(--primary-color); }
+
+        .marker-icon-arrow { width: 28px; height: 28px; position: relative; pointer-events: auto; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); transition: transform 0.2s; }
+        .marker-icon-arrow::before { content: ''; position: absolute; top: 30%; left: 50%; width: 14px; height: 14px; border-left: 3px solid #fff; border-bottom: 3px solid #fff; transform: translate(-50%, -50%) rotate(-45deg); }
+        .marker-custom-wrapper:hover .marker-icon-arrow { transform: translateY(-5px); }
+
+        .marker-icon-info { width: 28px; height: 28px; position: relative; pointer-events: auto; cursor: pointer; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; backdrop-filter: blur(4px); transition: all 0.2s; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        .marker-icon-info::after { content: 'i'; color: #fff; font-weight: bold; font-size: 16px; font-family: serif; font-style: italic; }
+        .marker-custom-wrapper:hover .marker-icon-info { transform: scale(1.15); background: var(--primary-color); border-color: var(--primary-color); }
+
+        .marker-icon-temp { width: 30px; height: 30px; background: rgba(52, 120, 246, 0.3); border: 2px dashed var(--primary-color); border-radius: 50%; animation: tempPulse 1.5s infinite; }
+        .marker-icon-temp::after { content: '+'; color: var(--primary-color); font-weight: 900; font-size: 20px; display: flex; justify-content: center; align-items: center; height: 100%; }
+
+        #bottomSceneBar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(30, 30, 30, 0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px; border-radius: 8px; z-index: 20; display: none; gap: 15px; max-width: 90%; overflow-x: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        #bottomSceneBar::-webkit-scrollbar { height: 6px; }
+        #bottomSceneBar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        .scene-thumb-item { width: 80px; display: flex; flex-direction: column; cursor: pointer; position: relative; transition: transform 0.2s; }
+        .scene-thumb-item:hover { transform: translateY(-3px); }
+        .scene-thumb-img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; border: 2px solid transparent; box-sizing: border-box; transition: border-color 0.2s; }
+        .scene-thumb-item.active .scene-thumb-img { border-color: #f97316; }
+        .scene-thumb-item.active::after { content: '✓'; position: absolute; top: -5px; right: -5px; background: #f97316; color: white; font-size: 10px; width: 16px; height: 16px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+        .scene-thumb-label { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); color: white; text-align: center; font-size: 12px; padding: 4px 0; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; pointer-events: none; }
 
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52, 120, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(52, 120, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(52, 120, 246, 0); } }
         @keyframes tempPulse { 0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(52, 120, 246, 0.4); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(52, 120, 246, 0); } 100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(52, 120, 246, 0); } }
@@ -155,7 +125,7 @@
             <option value="zh" selected>🇨🇳 中文</option>
             <option value="en">🇺🇸 EN</option>
         </select>
-        <div class="logo">🌌 720VR Creator</div>
+        <div class="logo">Spatial Interface - Eidos</div>
     </div>
 </div>
 
@@ -171,7 +141,6 @@
 <div id="editorView">
     <div class="main-content">
         <div id="editingBar"><span id="lblCurrentView">当前视角:</span> <span id="editingName" style="color:var(--primary-color); font-weight:bold;">主场景</span></div>
-
         <div class="upload-box" id="uploadBox">
             <h2 style="margin-top:0; color:#333;" id="lblStartProject">开启全景项目</h2>
             <p style="color:#666; font-size:14px; margin-bottom:20px;" id="lblUploadMainTip">请先上传一张作为封面的【主场景全景照片】</p>
@@ -180,6 +149,7 @@
         </div>
 
         <div id="viewer"></div>
+        <div id="bottomSceneBar"></div>
         <div id="placementTip">📍 选点模式：请单击放置标记，保存前可随意点击移动</div>
     </div>
 
@@ -191,10 +161,7 @@
 
         <div class="tab-content">
             <div class="panel-container active" id="propsPanel">
-                <div class="panel-group">
-                    <label id="lblProjName">项目名称</label>
-                    <input type="text" id="sceneTitle" placeholder="给整个项目起个名字">
-                </div>
+                <div class="panel-group"><label id="lblProjName">项目名称</label><input type="text" id="sceneTitle" placeholder="给整个项目起个名字"></div>
                 <button class="pro-btn" id="btnSaveProj" style="background-color: #10b981;" onclick="saveSceneInfo()">💾 保存项目信息</button>
 
                 <div class="panel-group" id="subScenePanel" style="display:none; margin-top:30px;">
@@ -209,7 +176,7 @@
                 <div id="markerDefaultState">
                     <button class="pro-btn btn-outline" id="btnAddNewMarker" onclick="enableMarkerPlacement()">+ 在画面中添加新标记</button>
                     <p id="markerGuide" style="font-size: 13px; color: #888; margin-top:15px; background:#f8f9fa; padding:10px; border-radius:6px; line-height: 1.5;">
-                        💡 <b>使用说明：</b><br>1. 点击上方按钮进入打点模式，然后在画面中单击。<br>2. 确认位置后点击保存 (保存前可随意点击移动)。<br>3. 点击已有标记可修改。
+                        💡 <b>使用说明：</b><br>1. 点击上方按钮进入打点模式，然后在画面中单击。<br>2. 确认位置后点击保存。<br>3. 点击已有标记可修改。
                     </p>
                 </div>
 
@@ -221,18 +188,9 @@
                             <option value="arrow" id="typeArrow">⬆️ 场景跳转箭头</option>
                         </select>
                     </div>
-                    <div class="panel-group">
-                        <label id="lblMarkerTitle">显示标题</label>
-                        <input type="text" id="proMarkerTitle" placeholder="如：电视机 / 前往主卧">
-                    </div>
-                    <div class="panel-group" id="proMarkerFieldDesc">
-                        <label id="lblMarkerDesc">详细描述</label>
-                        <textarea id="proMarkerDesc" placeholder="在此输入详细的图文介绍..."></textarea>
-                    </div>
-                    <div class="panel-group" id="proMarkerFieldTarget" style="display:none;">
-                        <label id="lblTargetRoom">目标跳转房间</label>
-                        <select id="proMarkerTarget"><option value="">请先在属性面板上传房间</option></select>
-                    </div>
+                    <div class="panel-group"><label id="lblMarkerTitle">显示标题</label><input type="text" id="proMarkerTitle" placeholder="如：电视机 / 前往主卧"></div>
+                    <div class="panel-group" id="proMarkerFieldDesc"><label id="lblMarkerDesc">详细描述</label><textarea id="proMarkerDesc" placeholder="在此输入详细的图文介绍..."></textarea></div>
+                    <div class="panel-group" id="proMarkerFieldTarget" style="display:none;"><label id="lblTargetRoom">目标跳转房间</label><select id="proMarkerTarget"><option value="">请先在属性面板上传房间</option></select></div>
 
                     <div style="margin-top: 30px; display:flex; flex-direction:column; gap:10px;">
                         <button class="pro-btn" id="btnSaveMarker" onclick="saveMarkerPro()">✅ 确认保存设置</button>
@@ -245,18 +203,14 @@
     </div>
 </div>
 
-<script type="importmap"> { "imports": { "three": "https://cdn.jsdelivr.net/npm/three/build/three.module.js", "@photo-sphere-viewer/core": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js", "@photo-sphere-viewer/markers-plugin": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js" } } </script>
+<script type="importmap"> { "imports": { "three": "https://fastly.jsdelivr.net/npm/three/build/three.module.js", "@photo-sphere-viewer/core": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js", "@photo-sphere-viewer/markers-plugin": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js" } } </script>
 
 <script type="module">
     import { Viewer } from '@photo-sphere-viewer/core';
     import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
 
-    // ======================= 身份认证核心 =======================
     let ownerId = localStorage.getItem('panoOwnerId');
-    if (!ownerId) {
-        ownerId = 'user_' + Date.now() + Math.random().toString(16).slice(2);
-        localStorage.setItem('panoOwnerId', ownerId);
-    }
+    if (!ownerId) { ownerId = 'user_' + Date.now() + Math.random().toString(16).slice(2); localStorage.setItem('panoOwnerId', ownerId); }
 
     let viewer = null;
     let markersPlugin = null;
@@ -265,81 +219,37 @@
     let allProjectScenes = [];
     let existingMarkersDatabase = [];
 
-    // 新增：分离的坐标状态，允许移动
     let currentlyEditingMarkerData = null;
     let isPlacingMarkerMode = false;
     let tempMarkerPos = null;
 
-    // ======================= 多语言字典 (i18n) =======================
     const i18n = {
         zh: {
-            navGallery: "作品展示", navEditor: "开始制作", navMyWorks: "我的作品",
-            galleryTitle: "发现了全景视界", myWorksTitle: "👤 我的专属作品集",
-            loading: "正在加载...", emptyGallery: "大廊目前还是空的。", emptyMyWorks: "您还没有上传过作品，点击上方【开始制作】吧！",
-            published: "已发布", draft: "草稿", lastModified: "修改时间：", justNow: "刚刚", editBtn: "✏️ 编辑", deleteBtn: "🗑️ 删除",
-            tabProps: "项目属性", tabMarker: "标记配置", lblProjName: "项目名称", btnSaveProj: "💾 保存项目信息",
-            lblRoomLib: "🔗 漫游房间库", btnAddRoom: "+ 添加新房间照片", btnAddNewMarker: "+ 在画面中添加新标记",
-            markerGuide: "💡 <b>使用说明：</b><br>1. 点击上方按钮进入打点模式，然后在画面中单击。<br>2. 确认位置后点击保存 (保存前可随意点击移动)。<br>3. 点击已有标记可修改。",
-            lblMarkerType: "标记类型", typeInfo: "📍 介绍图文点", typeArrow: "⬆️ 场景跳转箭头",
-            lblMarkerTitle: "显示标题", lblMarkerDesc: "详细描述", lblTargetRoom: "目标跳转房间",
-            btnSaveMarker: "✅ 确认保存设置", btnDelMarker: "🗑️ 删除此标记", btnCancel: "取消返回",
-            tipPlacement: "📍 选点模式：请单击画面放置标记，保存前可随意点击移动位置",
+            navGallery: "作品展示", navEditor: "开始制作", navMyWorks: "我的作品", galleryTitle: "发现了全景视界", myWorksTitle: "👤 我的专属作品集", loading: "正在加载...", emptyGallery: "大廊目前还是空的。", emptyMyWorks: "您还没有上传过作品，点击上方【开始制作】吧！", published: "已发布", draft: "草稿", lastModified: "修改时间：", justNow: "刚刚", editBtn: "✏️ 编辑", deleteBtn: "🗑️ 删除",
+            tabProps: "项目属性", tabMarker: "标记配置", lblProjName: "项目名称", btnSaveProj: "💾 保存项目信息", lblRoomLib: "🔗 漫游房间库", btnAddRoom: "+ 添加新房间照片", btnAddNewMarker: "+ 在画面中添加新标记", markerGuide: "💡 <b>使用说明：</b><br>1. 点击上方按钮进入打点模式，然后在画面中单击。<br>2. 确认位置后点击保存。<br>3. 点击已有标记可修改。",
+            lblMarkerType: "标记类型", typeInfo: "📍 介绍图文点", typeArrow: "⬆️ 场景跳转箭头", lblMarkerTitle: "显示标题", lblMarkerDesc: "详细描述", lblTargetRoom: "目标跳转房间", btnSaveMarker: "✅ 确认保存设置", btnDelMarker: "🗑️ 删除此标记", btnCancel: "取消返回", tipPlacement: "📍 选点模式：请单击画面放置标记，保存前可随意点击移动位置",
             lblStartProject: "开启全景项目", lblUploadMainTip: "请先上传一张作为封面的【主场景全景照片】", btnUploadMain: "+ 上传主场景封面", lblCurrentView: "当前视角:"
         },
         en: {
-            navGallery: "Gallery", navEditor: "Create", navMyWorks: "My Works",
-            galleryTitle: "Discover Panorama", myWorksTitle: "👤 My Portfolio",
-            loading: "Loading...", emptyGallery: "The gallery is currently empty.", emptyMyWorks: "No works yet. Click [Create]!",
-            published: "Published", draft: "Draft", lastModified: "Last modified: ", justNow: "Just now", editBtn: "✏️ Edit", deleteBtn: "🗑️ Delete",
-            tabProps: "Properties", tabMarker: "Hotspots", lblProjName: "Project Title", btnSaveProj: "💾 Save Project",
-            lblRoomLib: "🔗 Room Library", btnAddRoom: "+ Add New Room", btnAddNewMarker: "+ Add New Marker",
-            markerGuide: "💡 <b>Guide:</b><br>1. Click the button above, then click on the screen to place a marker.<br>2. Click anywhere to move it before saving.<br>3. Click existing markers to edit.",
-            lblMarkerType: "Marker Type", typeInfo: "📍 Info Point", typeArrow: "⬆️ Scene Link",
-            lblMarkerTitle: "Title", lblMarkerDesc: "Description", lblTargetRoom: "Target Room",
-            btnSaveMarker: "✅ Save Settings", btnDelMarker: "🗑️ Delete Marker", btnCancel: "Cancel",
-            tipPlacement: "📍 Placement: Click on image to place marker, click elsewhere to move.",
+            navGallery: "Gallery", navEditor: "Create", navMyWorks: "My Works", galleryTitle: "Discover Panorama", myWorksTitle: "👤 My Portfolio", loading: "Loading...", emptyGallery: "The gallery is currently empty.", emptyMyWorks: "No works yet. Click [Create]!", published: "Published", draft: "Draft", lastModified: "Last modified: ", justNow: "Just now", editBtn: "✏️ Edit", deleteBtn: "🗑️ Delete",
+            tabProps: "Properties", tabMarker: "Hotspots", lblProjName: "Project Title", btnSaveProj: "💾 Save Project", lblRoomLib: "🔗 Room Library", btnAddRoom: "+ Add New Room", btnAddNewMarker: "+ Add New Marker", markerGuide: "💡 <b>Guide:</b><br>1. Click the button above, then click on the screen to place a marker.<br>2. Click anywhere to move it before saving.<br>3. Click existing markers to edit.",
+            lblMarkerType: "Marker Type", typeInfo: "📍 Info Point", typeArrow: "⬆️ Scene Link", lblMarkerTitle: "Title", lblMarkerDesc: "Description", lblTargetRoom: "Target Room", btnSaveMarker: "✅ Save Settings", btnDelMarker: "🗑️ Delete Marker", btnCancel: "Cancel", tipPlacement: "📍 Placement: Click on image to place marker, click elsewhere to move.",
             lblStartProject: "Start Project", lblUploadMainTip: "Upload a main panorama cover photo first", btnUploadMain: "+ Upload Cover Photo", lblCurrentView: "Current View:"
         }
     };
 
     window.changeLang = () => {
-        const lang = document.getElementById('langSelect').value;
-        const t = i18n[lang];
-
-        document.getElementById('navGallery').innerHTML = t.navGallery + '<span class="underline"></span>';
-        document.getElementById('navEditor').innerHTML = t.navEditor + '<span class="underline"></span>';
-        document.getElementById('navMyWorks').innerHTML = t.navMyWorks + '<span class="underline"></span>';
-
-        const titleEl = document.getElementById('galleryTitle');
-        titleEl.innerText = document.getElementById('navMyWorks').classList.contains('active') ? t.myWorksTitle : t.galleryTitle;
-
-        document.getElementById('tabProps').innerText = t.tabProps;
-        document.getElementById('tabMarker').innerText = t.tabMarker;
-        document.getElementById('lblProjName').innerText = t.lblProjName;
-        document.getElementById('btnSaveProj').innerText = t.btnSaveProj;
-        document.getElementById('lblRoomLib').innerText = t.lblRoomLib;
-        document.getElementById('btnAddRoom').innerText = t.btnAddRoom;
-        document.getElementById('btnAddNewMarker').innerText = t.btnAddNewMarker;
-        document.getElementById('markerGuide').innerHTML = t.markerGuide;
-        document.getElementById('lblMarkerType').innerText = t.lblMarkerType;
-        document.getElementById('typeInfo').innerText = t.typeInfo;
-        document.getElementById('typeArrow').innerText = t.typeArrow;
-        document.getElementById('lblMarkerTitle').innerText = t.lblMarkerTitle;
-        document.getElementById('lblMarkerDesc').innerText = t.lblMarkerDesc;
-        document.getElementById('lblTargetRoom').innerText = t.lblTargetRoom;
-        document.getElementById('btnSaveMarker').innerText = t.btnSaveMarker;
-        document.getElementById('btnDelMarker').innerText = t.btnDelMarker;
-        document.getElementById('btnCancel').innerText = t.btnCancel;
-        document.getElementById('placementTip').innerText = t.tipPlacement;
-        document.getElementById('lblStartProject').innerText = t.lblStartProject;
-        document.getElementById('lblUploadMainTip').innerText = t.lblUploadMainTip;
-        document.getElementById('btnUploadMain').innerText = t.btnUploadMain;
-        document.getElementById('lblCurrentView').innerText = t.lblCurrentView;
-
-        if (document.getElementById('galleryView').style.display === 'block') {
-            const currentView = document.getElementById('navMyWorks').classList.contains('active') ? 'myWorks' : 'gallery';
-            loadGalleryData(currentView);
-        }
+        const lang = document.getElementById('langSelect').value; const t = i18n[lang];
+        document.getElementById('navGallery').innerHTML = t.navGallery + '<span class="underline"></span>'; document.getElementById('navEditor').innerHTML = t.navEditor + '<span class="underline"></span>'; document.getElementById('navMyWorks').innerHTML = t.navMyWorks + '<span class="underline"></span>';
+        document.getElementById('galleryTitle').innerText = document.getElementById('navMyWorks').classList.contains('active') ? t.myWorksTitle : t.galleryTitle;
+        document.getElementById('tabProps').innerText = t.tabProps; document.getElementById('tabMarker').innerText = t.tabMarker; document.getElementById('lblProjName').innerText = t.lblProjName; document.getElementById('btnSaveProj').innerText = t.btnSaveProj;
+        document.getElementById('lblRoomLib').innerText = t.lblRoomLib; document.getElementById('btnAddRoom').innerText = t.btnAddRoom; document.getElementById('btnAddNewMarker').innerText = t.btnAddNewMarker; document.getElementById('markerGuide').innerHTML = t.markerGuide;
+        document.getElementById('lblMarkerType').innerText = t.lblMarkerType; document.getElementById('typeInfo').innerText = t.typeInfo; document.getElementById('typeArrow').innerText = t.typeArrow; document.getElementById('lblMarkerTitle').innerText = t.lblMarkerTitle;
+        document.getElementById('lblMarkerDesc').innerText = t.lblMarkerDesc; document.getElementById('lblTargetRoom').innerText = t.lblTargetRoom; document.getElementById('btnSaveMarker').innerText = t.btnSaveMarker; document.getElementById('btnDelMarker').innerText = t.btnDelMarker;
+        document.getElementById('btnCancel').innerText = t.btnCancel; document.getElementById('placementTip').innerText = t.tipPlacement; document.getElementById('lblStartProject').innerText = t.lblStartProject; document.getElementById('lblUploadMainTip').innerText = t.lblUploadMainTip;
+        document.getElementById('btnUploadMain').innerText = t.btnUploadMain; document.getElementById('lblCurrentView').innerText = t.lblCurrentView;
+        if (document.getElementById('galleryView').style.display === 'block') { loadGalleryData(document.getElementById('navMyWorks').classList.contains('active') ? 'myWorks' : 'gallery'); }
+        if (document.getElementById('editorView').style.display === 'flex' && projectMainId) { renderThumbList(); }
     };
 
     function formatTime(timeStr, lang) {
@@ -347,71 +257,33 @@
         return new Date(timeStr).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '-');
     }
 
-    // ================= 视图路由控制 =================
     window.switchView = (viewName) => {
-        document.getElementById('navGallery').classList.remove('active');
-        document.getElementById('navMyWorks').classList.remove('active');
-        document.getElementById('navEditor').classList.remove('active');
-
+        document.getElementById('navGallery').classList.remove('active'); document.getElementById('navMyWorks').classList.remove('active'); document.getElementById('navEditor').classList.remove('active');
         if (viewName === 'gallery' || viewName === 'myWorks') {
             document.getElementById(viewName === 'gallery' ? 'navGallery' : 'navMyWorks').classList.add('active');
-            document.getElementById('editorView').style.display = 'none';
-            document.getElementById('galleryView').style.display = 'block';
+            document.getElementById('editorView').style.display = 'none'; document.getElementById('galleryView').style.display = 'block';
             loadGalleryData(viewName);
-            if (viewer) { viewer.destroy(); viewer = null; }
+            if (viewer) { try { viewer.destroy(); } catch(e) {} viewer = null; }
             resetEditorState();
         } else if (viewName === 'editor') {
-            document.getElementById('navEditor').classList.add('active');
-            document.getElementById('galleryView').style.display = 'none';
-            document.getElementById('editorView').style.display = 'flex';
+            document.getElementById('navEditor').classList.add('active'); document.getElementById('galleryView').style.display = 'none'; document.getElementById('editorView').style.display = 'flex';
             if (!projectMainId) resetEditorState();
         }
     };
 
-    // ================= 数据加载 (完美实现草稿机制) =================
     window.loadGalleryData = async (viewType) => {
-        const gallery = document.getElementById('gallery');
-        const lang = document.getElementById('langSelect').value;
-        const t = i18n[lang];
+        const gallery = document.getElementById('gallery'); const lang = document.getElementById('langSelect').value; const t = i18n[lang];
         gallery.innerHTML = `<p class="loading-msg">${t.loading}</p>`;
-
         try {
             const url = viewType === 'myWorks' ? `/api/my-scenes?ownerId=${ownerId}` : '/api/scenes';
-            const res = await fetch(url);
-            const data = await res.json();
-
-            if(!data.success || data.scenes.length === 0) {
-                gallery.innerHTML = `<p class="loading-msg">${viewType === 'myWorks' ? t.emptyMyWorks : t.emptyGallery}</p>`;
-                return;
-            }
-
+            const res = await fetch(url); const data = await res.json();
+            if(!data.success || data.scenes.length === 0) { gallery.innerHTML = `<p class="loading-msg">${viewType === 'myWorks' ? t.emptyMyWorks : t.emptyGallery}</p>`; return; }
             gallery.innerHTML = data.scenes.map(scene => {
-                // 【核心修复：草稿机制】
                 const isDraft = !scene.title || scene.title.includes('未命名') || scene.title.includes('我的全景') || scene.title.includes('副房间');
                 let badgeHtml = isDraft ? `<span class="badge badge-draft">${t.draft}</span>` : `<span class="badge badge-published">${t.published}</span>`;
-
                 const displayTime = scene.update_time || scene.create_time;
-
-                const overlayActions = (viewType === 'myWorks') ? `
-                    <div class="card-overlay-actions">
-                        <button class="card-btn btn-edit-card" onclick="event.stopPropagation(); loadProjectToEditor(${scene.id})">${t.editBtn}</button>
-                        <button class="card-btn btn-delete-card" onclick="event.stopPropagation(); deleteProjectFromCard(${scene.id})">${t.deleteBtn}</button>
-                    </div>
-                ` : '';
-
-                return `
-                    <div class="card" onclick="window.open('/view.html?id=${scene.id}', '_blank')">
-                        <div class="card-img-container">
-                            <img src="${scene.image_url}" class="card-img" alt="封面图">
-                            ${overlayActions}
-                        </div>
-                        <div class="card-info">
-                            <h3 class="card-title">${scene.title || '未命名项目'}</h3>
-                            ${badgeHtml}
-                            <p class="card-time">${t.lastModified}${formatTime(displayTime, lang)}</p>
-                        </div>
-                    </div>
-                `;
+                const overlayActions = (viewType === 'myWorks') ? `<div class="card-overlay-actions"><button class="card-btn btn-edit-card" onclick="event.stopPropagation(); loadProjectToEditor(${scene.id})">${t.editBtn}</button><button class="card-btn btn-delete-card" onclick="event.stopPropagation(); deleteProjectFromCard(${scene.id})">${t.deleteBtn}</button></div>` : '';
+                return `<div class="card" onclick="window.open('/view.html?id=${scene.id}', '_blank')"><div class="card-img-container"><img src="${scene.image_url}" class="card-img" alt="封面图">${overlayActions}</div><div class="card-info"><h3 class="card-title">${scene.title || '未命名项目'}</h3>${badgeHtml}<p class="card-time">${t.lastModified}${formatTime(displayTime, lang)}</p></div></div>`;
             }).join('');
         } catch (error) { gallery.innerHTML = '<p class="loading-msg" style="color:red;">获取数据失败</p>'; }
     };
@@ -420,53 +292,35 @@
         const lang = document.getElementById('langSelect').value;
         if(!confirm(lang === 'zh' ? "警告：确定要永久删除这个作品吗？此操作不可恢复！" : "Are you sure you want to delete this project?")) return;
         try {
-            const res = await fetch(`/api/scenes/${id}?ownerId=${ownerId}`, { method: 'DELETE' });
-            const data = await res.json();
-            if(data.success) loadGalleryData('myWorks');
-            else alert(data.error || '删除失败');
+            const res = await fetch(`/api/scenes/${id}?ownerId=${ownerId}`, { method: 'DELETE' }); const data = await res.json();
+            if(data.success) loadGalleryData('myWorks'); else alert(data.error || '删除失败');
         } catch(err) { alert('网络错误'); }
     }
 
-    // ================= 编辑器加载 =================
-    window.loadProjectToEditor = (editId) => {
-        switchView('editor');
-        projectMainId = editId;
-        document.getElementById('uploadBox').style.display = 'none';
-        document.getElementById('subScenePanel').style.display = 'block';
-        allProjectScenes = [];
-
-        fetch(`/api/scenes/${editId}?ownerId=${ownerId}`)
-            .then(r => r.json())
-            .then(data => {
-                if(!data.success) { switchView('myWorks'); return alert("无权访问: " + data.error); }
-                document.getElementById('sceneTitle').value = data.scene.title;
-                allProjectScenes.push({ id: data.scene.id, url: data.scene.image_url, isMain: true });
-
-                return fetch(`/api/scenes/${editId}/subs?ownerId=${ownerId}`);
-            })
-            .then(r => r ? r.json() : null)
-            .then(subData => {
-                if(subData && subData.subs) {
-                    subData.subs.forEach(sub => { allProjectScenes.push({ id: sub.id, url: sub.image_url, isMain: false }); });
-                }
-                switchEditScene(projectMainId);
-            })
-            .catch(e => {
-                alert("读取数据失败: " + e.message);
-                switchView('myWorks');
-            });
+    window.loadProjectToEditor = async (editId) => {
+        try {
+            document.getElementById('navGallery').classList.remove('active'); document.getElementById('navMyWorks').classList.remove('active'); document.getElementById('navEditor').classList.add('active');
+            document.getElementById('galleryView').style.display = 'none'; document.getElementById('editorView').style.display = 'flex';
+            document.getElementById('uploadBox').style.display = 'none'; document.getElementById('subScenePanel').style.display = 'block';
+            projectMainId = editId; allProjectScenes = [];
+            const r = await fetch(`/api/scenes/${editId}?ownerId=${ownerId}`); const data = await r.json();
+            if(!data.success) { alert("加载失败: " + data.error); switchView('myWorks'); return; }
+            document.getElementById('sceneTitle').value = data.scene.title;
+            allProjectScenes.push({ id: data.scene.id, url: data.scene.image_url, isMain: true });
+            const rSub = await fetch(`/api/scenes/${editId}/subs?ownerId=${ownerId}`); const subData = await rSub.json();
+            if(subData && subData.subs) { subData.subs.forEach(sub => { allProjectScenes.push({ id: sub.id, url: sub.image_url, isMain: false }); }); }
+            await switchEditScene(projectMainId);
+        } catch (err) { alert("加载异常: " + err.message); switchView('myWorks'); }
     };
 
     function resetEditorState() {
         projectMainId = null; editingSceneId = null; allProjectScenes = []; existingMarkersDatabase = [];
         document.getElementById('uploadBox').style.display = 'block';
-        document.getElementById('viewer').classList.remove('active'); // 隐藏画布
-        document.getElementById('subScenePanel').style.display = 'none';
-        document.getElementById('editingBar').style.display = 'none';
-        document.getElementById('sceneTitle').value = '';
-        document.getElementById('thumbList').innerHTML = '';
-        switchSidebarPanel('props');
-        cancelMarkerEdit();
+        const oldViewer = document.getElementById('viewer'); if(oldViewer) oldViewer.style.display = 'none';
+        document.getElementById('subScenePanel').style.display = 'none'; document.getElementById('editingBar').style.display = 'none';
+        document.getElementById('bottomSceneBar').style.display = 'none';
+        document.getElementById('sceneTitle').value = ''; document.getElementById('thumbList').innerHTML = '';
+        switchSidebarPanel('props'); cancelMarkerEdit();
     }
 
     window.handleMainUpload = async () => { await doUpload(document.getElementById('mainFileInput').files[0], null); };
@@ -474,32 +328,20 @@
 
     async function doUpload(file, parentId) {
         if (!file) return;
-        const formData = new FormData(); formData.append('image', file);
-        formData.append('ownerId', ownerId);
-        if (parentId) formData.append('parentId', parentId);
-
+        const formData = new FormData(); formData.append('image', file); formData.append('ownerId', ownerId); if (parentId) formData.append('parentId', parentId);
         try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            const data = await res.json();
-
-            if (!data.success) {
-                alert("上传失败: " + (data.error || '后端错误'));
-                return;
-            }
-
+            const res = await fetch('/api/upload', { method: 'POST', body: formData }); const data = await res.json();
+            if (!data.success) { alert("上传失败: " + (data.error || '后端错误')); return; }
             if (!parentId) {
-                projectMainId = data.sceneId;
-                document.getElementById('uploadBox').style.display = 'none';
-                document.getElementById('subScenePanel').style.display = 'block';
-                document.getElementById('sceneTitle').value = "我的全景项目"; // 默认名代表草稿
+                projectMainId = data.sceneId; document.getElementById('uploadBox').style.display = 'none'; document.getElementById('subScenePanel').style.display = 'block';
+                document.getElementById('sceneTitle').value = "我的全景项目";
                 allProjectScenes.push({ id: data.sceneId, url: data.imageUrl, isMain: true });
-                switchEditScene(data.sceneId);
+                await switchEditScene(data.sceneId);
             } else {
                 allProjectScenes.push({ id: data.sceneId, url: data.imageUrl, isMain: false });
                 renderThumbList();
             }
-
-        } catch (err) { alert("网络或跨域错误: " + err.message); }
+        } catch (err) { alert("网络错误: " + err.message); }
     }
 
     window.switchEditScene = async (targetId) => {
@@ -507,72 +349,124 @@
             editingSceneId = targetId;
             renderThumbList();
             switchSidebarPanel('props');
-
             document.getElementById('uploadBox').style.display = 'none';
-            document.getElementById('viewer').classList.add('active'); // 用透明度渐显修复白屏
 
-            const res = await fetch(`/api/scenes/${targetId}?ownerId=${ownerId}`);
-            const data = await res.json();
-            if (!data.success) return alert("场景加载失败");
+            if (viewer) { try { viewer.destroy(); } catch(e){} viewer = null; }
+            const oldViewer = document.getElementById('viewer');
+            const newViewer = document.createElement('div'); newViewer.id = 'viewer';
+            newViewer.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;";
+            newViewer.classList.add('active');
+            oldViewer.parentNode.replaceChild(newViewer, oldViewer);
+
+            const res = await fetch(`/api/scenes/${targetId}?ownerId=${ownerId}`); const data = await res.json();
+            if (!data.success) throw new Error("获取标记数据失败");
 
             const targetScene = allProjectScenes.find(s => s.id == targetId);
             document.getElementById('editingBar').style.display = 'block';
-            document.getElementById('editingName').innerText = targetScene.isMain ? '主场景 (Cover)' : `副房间 (ID:${targetId})`;
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('editingName').innerText = targetScene.isMain ? (lang === 'zh' ? '主场景' : 'Cover') : (lang === 'zh' ? `房间 ${targetId}` : `Room ${targetId}`);
 
             existingMarkersDatabase = data.markers || [];
+            const formatted = existingMarkersDatabase.map(m => {
+                let targetName = m.title;
+                const isArrow = m.target_scene_id !== null && m.target_scene_id !== 0;
 
-            // 【核心修复】：为所有的 HTML 标记强制增加 size，防止出现隐形点击框
-            const formatted = existingMarkersDatabase.map(m => ({
-                id: `m-${m.id}`,
-                position: { yaw: parseFloat(m.yaw) || 0, pitch: parseFloat(m.pitch) || 0 }, // 强制浮点数防崩溃
-                html: m.target_scene_id ? `<div class="marker-custom marker-arrow"></div>` : `<div class="marker-custom marker-info"></div>`,
-                size: { width: 32, height: 32 }, // 必须给尺寸，否则点不到！
-                anchor: 'center center',
-                tooltip: { content: m.title },
-                data: { dbMarkerId: m.id }
-            }));
+                if (isArrow) {
+                    const ts = allProjectScenes.find(s => s.id == m.target_scene_id);
+                    if (ts) { const tsIndex = allProjectScenes.indexOf(ts); targetName = ts.isMain ? (lang === 'zh' ? '主场景' : 'Cover') : (lang === 'zh' ? `位置${tsIndex}` : `Pos ${tsIndex}`); }
+                }
+                const iconClass = isArrow ? 'marker-icon-arrow' : 'marker-icon-info';
+
+                return {
+                    id: `m-${m.id}`, position: { yaw: parseFloat(m.yaw) || 0, pitch: parseFloat(m.pitch) || 0 },
+                    html: `<div class="marker-custom-wrapper"><div class="marker-label">${targetName}</div><div class="${iconClass}"></div></div>`,
+                    size: { width: 80, height: 50 }, anchor: 'bottom center', tooltip: { content: m.title }, data: { dbMarkerId: m.id }
+                };
+            });
 
             setTimeout(() => {
                 try {
-                    if (viewer) { viewer.destroy(); viewer = null; }
                     viewer = new Viewer({
-                        container: document.querySelector('#viewer'),
+                        container: document.getElementById('viewer'),
                         panorama: targetScene.url,
                         defaultZoomLvl: 0,
+                        // 【新增】：编辑器里的自定义下载按钮（兼容中英双语）
+                        navbar: [
+                            'autorotate', 'zoom',
+                            {
+                                id: 'download',
+                                title: lang === 'zh' ? '下载原图' : 'Download Image',
+                                content: '<svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor; transform: translateY(2px);"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
+                                onClick: (viewer) => {
+                                    const editingNameEl = document.getElementById('editingName');
+                                    const oldText = editingNameEl.innerText;
+                                    editingNameEl.innerText = lang === 'zh' ? "⬇️ 正在打包下载..." : "⬇️ Downloading...";
+
+                                    fetch(viewer.config.panorama)
+                                        .then(res => res.blob())
+                                        .then(blob => {
+                                            const url = window.URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = '全景原图.jpg';
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            window.URL.revokeObjectURL(url);
+                                            document.body.removeChild(a);
+                                            editingNameEl.innerText = oldText;
+                                        })
+                                        .catch(() => {
+                                            alert(lang === 'zh' ? '下载失败' : 'Download failed');
+                                            editingNameEl.innerText = oldText;
+                                        });
+                                }
+                            },
+                            'fullscreen'
+                        ],
                         plugins: [ [MarkersPlugin, { markers: formatted }] ]
                     });
                     markersPlugin = viewer.getPlugin(MarkersPlugin);
-
-                    markersPlugin.addEventListener('select-marker', (e, marker) => {
-                        const m = marker || e.marker;
-                        if (isPlacingMarkerMode) return;
-                        loadMarkerToProSidebar(m);
-                    });
-                } catch(engineErr) {
-                    alert("全景引擎渲染失败: " + engineErr.message);
-                }
-            }, 50);
-        } catch(err) {
-            alert("切换过程发生错误: " + err.message);
-        }
+                    markersPlugin.addEventListener('select-marker', (e, marker) => { const m = marker || e.marker; if (isPlacingMarkerMode) return; loadMarkerToProSidebar(m); });
+                } catch(engineErr) { alert("引擎初始化失败: " + engineErr.message); }
+            }, 30);
+        } catch(err) { alert("场景切换失败: " + err.message); }
     };
 
     function renderThumbList() {
+        const lang = document.getElementById('langSelect').value;
         const thumbList = document.getElementById('thumbList');
-        thumbList.innerHTML = allProjectScenes.map(s => `
+        thumbList.innerHTML = allProjectScenes.map((s, index) => `
                 <div class="thumb-item ${s.id == editingSceneId ? 'active' : ''}" style="background-image: url('${s.url}')" onclick="switchEditScene(${s.id})">
-                    ${s.isMain ? '<div class="badge-main">Cover</div>' : ''}
+                    ${s.isMain ? (lang === 'zh' ? '<div class="badge-main">主场景</div>' : '<div class="badge-main">Cover</div>') : ''}
                     <div class="btn-delete-thumb" onclick="event.stopPropagation(); deleteScene(${s.id}, ${s.isMain})">×</div>
                     <span>ID: ${s.id}</span>
                 </div>
             `).join('');
 
+        const bottomSceneBar = document.getElementById('bottomSceneBar');
+        if (bottomSceneBar) {
+            bottomSceneBar.innerHTML = allProjectScenes.map((s, index) => {
+                const label = s.isMain ? (lang === 'zh' ? '主场景' : 'Cover') : (lang === 'zh' ? `位置${index}` : `Pos ${index}`);
+                return `
+                    <div class="scene-thumb-item ${s.id == editingSceneId ? 'active' : ''}" onclick="switchEditScene(${s.id})">
+                        <img src="${s.url}" class="scene-thumb-img">
+                        <div class="scene-thumb-label">${label}</div>
+                    </div>
+                `;
+            }).join('');
+            bottomSceneBar.style.display = allProjectScenes.length > 0 ? 'flex' : 'none';
+        }
+
         const select = document.getElementById('proMarkerTarget');
         const targetOptions = allProjectScenes.filter(s => s.id != editingSceneId);
         if (targetOptions.length > 0) {
-            select.innerHTML = targetOptions.map(s => `<option value="${s.id}">${s.isMain ? '主场景' : `房间 ${s.id}`}</option>`).join('');
+            select.innerHTML = targetOptions.map(s => {
+                const tsIndex = allProjectScenes.indexOf(s);
+                const label = s.isMain ? (lang === 'zh' ? '主场景' : 'Cover') : (lang === 'zh' ? `位置${tsIndex}` : `Pos ${tsIndex}`);
+                return `<option value="${s.id}">${label}</option>`;
+            }).join('');
         } else {
-            select.innerHTML = `<option value="">无可跳转房间</option>`;
+            select.innerHTML = `<option value="">${lang === 'zh' ? '无可跳转房间' : 'No rooms available'}</option>`;
         }
     }
 
@@ -583,8 +477,7 @@
             await fetch(`/api/scenes/${id}?ownerId=${ownerId}`, { method: 'DELETE' });
             if (isMain) { switchView('myWorks'); return; }
             allProjectScenes = allProjectScenes.filter(s => s.id != id);
-            if (editingSceneId == id) switchEditScene(projectMainId);
-            else renderThumbList();
+            if (editingSceneId == id) switchEditScene(projectMainId); else renderThumbList();
         } catch(err) {}
     };
 
@@ -596,20 +489,10 @@
         alert(lang === 'zh' ? '保存成功！' : 'Saved successfully!');
     };
 
-    // ================= 侧边栏打点交互核心 =================
     window.switchSidebarPanel = (panelName) => {
-        const tabs = document.querySelectorAll('.tab-btn');
-        const propsPanel = document.getElementById('propsPanel');
-        const markerPanel = document.getElementById('markerPanel');
-
-        if (panelName === 'marker') {
-            tabs[0].classList.remove('active'); tabs[1].classList.add('active');
-            propsPanel.style.display = 'none'; markerPanel.style.display = 'block';
-        } else {
-            tabs[0].classList.add('active'); tabs[1].classList.remove('active');
-            propsPanel.style.display = 'block'; markerPanel.style.display = 'none';
-            cancelMarkerEdit();
-        }
+        const tabs = document.querySelectorAll('.tab-btn'); const propsPanel = document.getElementById('propsPanel'); const markerPanel = document.getElementById('markerPanel');
+        if (panelName === 'marker') { tabs[0].classList.remove('active'); tabs[1].classList.add('active'); propsPanel.style.display = 'none'; markerPanel.style.display = 'block'; }
+        else { tabs[0].classList.add('active'); tabs[1].classList.remove('active'); propsPanel.style.display = 'block'; markerPanel.style.display = 'none'; cancelMarkerEdit(); }
     }
 
     window.toggleProMarkerFields = () => {
@@ -622,56 +505,33 @@
         const lang = document.getElementById('langSelect').value;
         if(!projectMainId) return alert(lang === 'zh' ? '请先上传全景照片' : 'Please upload a panorama first');
         if (currentlyEditingMarkerData && !confirm(lang === 'zh' ? "放弃当前未保存的标记？" : "Discard unsaved marker?")) return;
-
         cancelMarkerEdit();
-
         isPlacingMarkerMode = true;
         document.getElementById('placementTip').innerText = i18n[lang].tipPlacement;
         document.getElementById('placementTip').style.display = 'block';
-
         viewer.addEventListener('click', onViewerClickPlacement);
     }
 
-    // 【核心修复】：兼容最新的点击参数提取与防卡死
     function onViewerClickPlacement(e) {
-        const pos = e.data;
-        if (!pos || pos.yaw === undefined) return;
-
+        const pos = e.data; if (!pos || pos.yaw === undefined) return;
         tempMarkerPos = pos;
-
+        const lang = document.getElementById('langSelect').value; const placingText = lang === 'zh' ? '放置中...' : 'Placing...';
         if (!currentlyEditingMarkerData || !currentlyEditingMarkerData.isNew) {
             currentlyEditingMarkerData = { isNew: true };
-            document.getElementById('markerDefaultState').style.display = 'none';
-            document.getElementById('markerEditState').style.display = 'block';
-            document.getElementById('proMarkerTitle').value = '';
-            document.getElementById('proMarkerDesc').value = '';
-            document.getElementById('btnDeleteMarker').style.display = 'none';
-
-            // 安全清理可能残留的临时标记
+            document.getElementById('markerDefaultState').style.display = 'none'; document.getElementById('markerEditState').style.display = 'block';
+            document.getElementById('proMarkerTitle').value = ''; document.getElementById('proMarkerDesc').value = ''; document.getElementById('btnDeleteMarker').style.display = 'none';
             try { markersPlugin.removeMarker('temp-marker'); } catch(err) {}
-
             markersPlugin.addMarker({
-                id: 'temp-marker',
-                position: { yaw: pos.yaw, pitch: pos.pitch },
-                html: `<div class="marker-custom marker-temp"></div>`,
-                size: { width: 32, height: 32 },
-                anchor: 'center center'
+                id: 'temp-marker', position: { yaw: pos.yaw, pitch: pos.pitch },
+                html: `<div class="marker-custom-wrapper marker-temp"><div class="marker-label">${placingText}</div><div class="marker-icon-temp"></div></div>`,
+                size: { width: 80, height: 50 }, anchor: 'bottom center'
             });
         } else {
-            try {
-                // 尝试移动临时标记
-                markersPlugin.updateMarker({
-                    id: 'temp-marker',
-                    position: { yaw: pos.yaw, pitch: pos.pitch }
-                });
-            } catch(err) {
-                // 如果引擎因为某种原因弄丢了临时标记，就重新建一个
-                markersPlugin.addMarker({
-                    id: 'temp-marker',
-                    position: { yaw: pos.yaw, pitch: pos.pitch },
-                    html: `<div class="marker-custom marker-temp"></div>`,
-                    size: { width: 32, height: 32 },
-                    anchor: 'center center'
+            try { markersPlugin.updateMarker({ id: 'temp-marker', position: { yaw: pos.yaw, pitch: pos.pitch } }); }
+            catch(err) {
+                markersPlugin.addMarker({ id: 'temp-marker', position: { yaw: pos.yaw, pitch: pos.pitch },
+                    html: `<div class="marker-custom-wrapper marker-temp"><div class="marker-label">${placingText}</div><div class="marker-icon-temp"></div></div>`,
+                    size: { width: 80, height: 50 }, anchor: 'bottom center'
                 });
             }
         }
@@ -679,102 +539,72 @@
 
     function loadMarkerToProSidebar(marker) {
         if(!marker || !marker.data || !marker.data.dbMarkerId) return;
-        const mData = existingMarkersDatabase.find(m => m.id === marker.data.dbMarkerId);
-        if (!mData) return;
-
-        cancelMarkerEdit();
-        switchSidebarPanel('marker');
-
+        const mData = existingMarkersDatabase.find(m => m.id === marker.data.dbMarkerId); if (!mData) return;
+        cancelMarkerEdit(); switchSidebarPanel('marker');
         currentlyEditingMarkerData = { isNew: false, dbData: mData, markerIdOnCanvas: marker.id };
-
-        document.getElementById('markerDefaultState').style.display = 'none';
-        document.getElementById('markerEditState').style.display = 'block';
-        document.getElementById('btnDeleteMarker').style.display = 'block';
-
+        document.getElementById('markerDefaultState').style.display = 'none'; document.getElementById('markerEditState').style.display = 'block'; document.getElementById('btnDeleteMarker').style.display = 'block';
         const isArrow = mData.target_scene_id !== null && mData.target_scene_id !== 0;
         document.getElementById('proMarkerType').value = isArrow ? 'arrow' : 'info';
         toggleProMarkerFields();
-
-        document.getElementById('proMarkerTitle').value = mData.title;
-        document.getElementById('proMarkerDesc').value = mData.description || '';
-        document.getElementById('proMarkerTarget').value = mData.target_scene_id || '';
+        document.getElementById('proMarkerTitle').value = mData.title; document.getElementById('proMarkerDesc').value = mData.description || ''; document.getElementById('proMarkerTarget').value = mData.target_scene_id || '';
     }
 
     window.cancelMarkerEdit = () => {
         isPlacingMarkerMode = false;
-        if (viewer) {
-            try { viewer.removeEventListener('click', onViewerClickPlacement); } catch(e){}
-        }
-
-        // 【核心修复】：暴力拦截引擎的找不到标记报错，无视它！
-        if (markersPlugin) {
-            try { markersPlugin.removeMarker('temp-marker'); } catch(e) {}
-        }
-
-        document.getElementById('placementTip').style.display = 'none';
-        document.getElementById('markerDefaultState').style.display = 'block';
-        document.getElementById('markerEditState').style.display = 'none';
-        currentlyEditingMarkerData = null;
-        tempMarkerPos = null;
+        if (viewer) { try { viewer.removeEventListener('click', onViewerClickPlacement); } catch(e){} }
+        if (markersPlugin) { try { markersPlugin.removeMarker('temp-marker'); } catch(e) {} }
+        document.getElementById('placementTip').style.display = 'none'; document.getElementById('markerDefaultState').style.display = 'block'; document.getElementById('markerEditState').style.display = 'none';
+        currentlyEditingMarkerData = null; tempMarkerPos = null;
     }
 
     window.saveMarkerPro = async () => {
         if(!currentlyEditingMarkerData) return;
-        const isArrow = document.getElementById('proMarkerType').value === 'arrow';
-        const title = document.getElementById('proMarkerTitle').value;
-        const lang = document.getElementById('langSelect').value;
+        const isArrow = document.getElementById('proMarkerType').value === 'arrow'; const title = document.getElementById('proMarkerTitle').value; const lang = document.getElementById('langSelect').value;
         if(!title) return alert(lang === 'zh' ? '请填写标题' : 'Title is required');
-
-        const desc = isArrow ? "" : document.getElementById('proMarkerDesc').value;
-        const targetId = isArrow ? document.getElementById('proMarkerTarget').value : null;
+        const desc = isArrow ? "" : document.getElementById('proMarkerDesc').value; const targetId = isArrow ? document.getElementById('proMarkerTarget').value : null;
 
         let posToSave = null;
-
         if (!currentlyEditingMarkerData.isNew) {
             posToSave = { yaw: currentlyEditingMarkerData.dbData.yaw, pitch: currentlyEditingMarkerData.dbData.pitch };
             await fetch(`/api/markers/${currentlyEditingMarkerData.dbData.id}`, { method: 'DELETE' });
             markersPlugin.removeMarker(currentlyEditingMarkerData.markerIdOnCanvas);
             existingMarkersDatabase = existingMarkersDatabase.filter(m => m.id !== currentlyEditingMarkerData.dbData.id);
-        } else {
-            posToSave = tempMarkerPos;
+        } else { posToSave = tempMarkerPos; }
+
+        let targetName = title;
+        if (isArrow && targetId) {
+            const ts = allProjectScenes.find(s => s.id == targetId);
+            if (ts) { const tsIndex = allProjectScenes.indexOf(ts); targetName = ts.isMain ? (lang === 'zh' ? '主场景' : 'Cover') : (lang === 'zh' ? `位置${tsIndex}` : `Pos ${tsIndex}`); }
         }
 
         const newMarkerData = { yaw: posToSave.yaw, pitch: posToSave.pitch, title, description: desc, target_scene_id: targetId, ownerId };
-
         const res = await fetch(`/api/scenes/${editingSceneId}/markers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newMarkerData) });
         const data = await res.json();
 
         if (data.success) {
+            const iconClass = isArrow ? 'marker-icon-arrow' : 'marker-icon-info';
             markersPlugin.addMarker({
-                id: `m-${data.markerId}`,
-                position: { yaw: posToSave.yaw, pitch: posToSave.pitch },
-                html: isArrow ? `<div class="marker-custom marker-arrow"></div>` : `<div class="marker-custom marker-info"></div>`,
-                size: { width: 32, height: 32 },
-                anchor: 'center center',
-                tooltip: { content: title, position: 'top' },
-                data: { dbMarkerId: data.markerId }
+                id: `m-${data.markerId}`, position: { yaw: posToSave.yaw, pitch: posToSave.pitch },
+                html: `<div class="marker-custom-wrapper"><div class="marker-label">${targetName}</div><div class="${iconClass}"></div></div>`,
+                size: { width: 80, height: 50 }, anchor: 'bottom center', tooltip: { content: title, position: 'top' }, data: { dbMarkerId: data.markerId }
             });
             existingMarkersDatabase.push({ id: data.markerId, ...newMarkerData });
-            cancelMarkerEdit();
-            switchSidebarPanel('props');
+            cancelMarkerEdit(); switchSidebarPanel('props');
         }
     };
 
     window.deleteMarkerPro = async () => {
         if(!currentlyEditingMarkerData || currentlyEditingMarkerData.isNew) return;
-        const lang = document.getElementById('langSelect').value;
-        if(!confirm(lang === 'zh' ? "确定要删除此标记吗？" : "Delete this marker?")) return;
+        const lang = document.getElementById('langSelect').value; if(!confirm(lang === 'zh' ? "确定要删除此标记吗？" : "Delete this marker?")) return;
         const dbMarkerId = currentlyEditingMarkerData.dbData.id;
         try {
             await fetch(`/api/markers/${dbMarkerId}`, { method: 'DELETE' });
             markersPlugin.removeMarker(currentlyEditingMarkerData.markerIdOnCanvas);
             existingMarkersDatabase = existingMarkersDatabase.filter(m => m.id !== dbMarkerId);
-            cancelMarkerEdit();
-            switchSidebarPanel('props');
+            cancelMarkerEdit(); switchSidebarPanel('props');
         } catch(err){}
     }
 
-    // 默认进入作品长廊
     switchView('gallery');
 </script>
 </body>

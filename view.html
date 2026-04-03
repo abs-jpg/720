@@ -3,114 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>720VR - 全景漫游展示</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css">
+    <title>Spatial Interface - Eidos</title>
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css">
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #111; font-family: 'Segoe UI', sans-serif;}
         #viewer { width: 100%; height: 100%; }
-        
-        /* 顶部悬浮信息栏 */
+
         .info-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%); color: white; z-index: 10; pointer-events: none; }
         .scene-title { margin: 0; font-size: 24px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .watermark { font-size: 12px; opacity: 0.7; margin-top: 5px; }
 
-        /* 与编辑器保持一致的高级热点 UI */
-        .marker-custom {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: rgba(255,255,255,0.95); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; transition: transform 0.2s;
-            border: 2px solid #3478f6; box-sizing: border-box;
-            pointer-events: auto;
+        /* ================= 1. 区分两种热点标记 UI ================= */
+        .marker-custom-wrapper {
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; pointer-events: none;
         }
-        .marker-custom:hover { transform: scale(1.15); box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
-        .marker-info::after { content: 'i'; color: #3478f6; font-weight: 900; font-size: 16px; font-style: italic; }
-        .marker-arrow { border-color: #f59e0b; animation: floatArrow 2s infinite ease-in-out; }
-        .marker-arrow::after { content: '↑'; color: #f59e0b; font-weight: 900; font-size: 18px; }
-        
-        @keyframes floatArrow { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } }
+        .marker-label {
+            background: rgba(0, 0, 0, 0.6); color: #fff; padding: 5px 12px; border-radius: 4px;
+            font-size: 13px; margin-bottom: 8px; white-space: nowrap; pointer-events: auto;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: background 0.2s; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .marker-custom-wrapper:hover .marker-label { background: #3478f6; }
+
+        /* 图标 1：跳转场景 (飞鸟箭头) */
+        .marker-icon-arrow {
+            width: 28px; height: 28px; position: relative; pointer-events: auto; cursor: pointer;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); transition: transform 0.2s;
+        }
+        .marker-icon-arrow::before {
+            content: ''; position: absolute; top: 30%; left: 50%; width: 14px; height: 14px;
+            border-left: 3px solid #fff; border-bottom: 3px solid #fff; transform: translate(-50%, -50%) rotate(-45deg);
+        }
+        .marker-custom-wrapper:hover .marker-icon-arrow { transform: translateY(-5px); }
+
+        /* 图标 2：图文信息点 (圆形 i) */
+        .marker-icon-info {
+            width: 28px; height: 28px; position: relative; pointer-events: auto; cursor: pointer;
+            background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%;
+            backdrop-filter: blur(4px); transition: all 0.2s; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .marker-icon-info::after {
+            content: 'i'; color: #fff; font-weight: bold; font-size: 16px; font-family: serif; font-style: italic;
+        }
+        .marker-custom-wrapper:hover .marker-icon-info { transform: scale(1.15); background: #3478f6; border-color: #3478f6; }
+
+        /* ================= 2. 底部毛玻璃场景导航栏 ================= */
+        #bottomSceneBar {
+            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 15px; border-radius: 8px; z-index: 20; display: none; gap: 15px;
+            max-width: 90%; overflow-x: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        #bottomSceneBar::-webkit-scrollbar { height: 6px; }
+        #bottomSceneBar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+        .scene-thumb-item { width: 80px; display: flex; flex-direction: column; cursor: pointer; position: relative; transition: transform 0.2s; }
+        .scene-thumb-item:hover { transform: translateY(-3px); }
+        .scene-thumb-img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; border: 2px solid transparent; box-sizing: border-box; transition: border-color 0.2s; }
+        .scene-thumb-item.active .scene-thumb-img { border-color: #f97316; }
+        .scene-thumb-item.active::after {
+            content: '✓'; position: absolute; top: -5px; right: -5px; background: #f97316; color: white;
+            font-size: 10px; width: 16px; height: 16px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold;
+        }
+        .scene-thumb-label {
+            position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); color: white;
+            text-align: center; font-size: 12px; padding: 4px 0; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; pointer-events: none;
+        }
+
+        /* ================= 3. 高级信息显示弹窗 ================= */
+        .custom-modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
+            z-index: 1000; display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .custom-modal-overlay.active { display: flex; opacity: 1; }
+        .custom-modal-box {
+            background: #222; color: #fff; width: 90%; max-width: 650px; max-height: 80vh;
+            border-radius: 12px; display: flex; flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+            transform: translateY(20px); transition: transform 0.3s ease;
+        }
+        .custom-modal-overlay.active .custom-modal-box { transform: translateY(0); }
+        .custom-modal-header {
+            padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .custom-modal-title { margin: 0; font-size: 22px; font-weight: 600; color: #fff; }
+        .custom-modal-close {
+            background: transparent; border: none; color: #999; font-size: 28px; cursor: pointer;
+            padding: 0; line-height: 1; transition: color 0.2s;
+        }
+        .custom-modal-close:hover { color: #ef4444; }
+        .custom-modal-body {
+            padding: 25px; overflow-y: auto; font-size: 16px; line-height: 1.6; color: #ddd;
+            white-space: pre-wrap; /* 保持原有的换行格式 */
+        }
+        .custom-modal-body::-webkit-scrollbar { width: 8px; }
+        .custom-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
     </style>
 </head>
 <body>
 
-    <div class="info-bar">
-        <h1 class="scene-title" id="titleObj">正在加载场景...</h1>
-        <div class="watermark">由 720VR Creator 强力驱动</div>
+<div class="info-bar">
+    <h1 class="scene-title" id="titleObj">正在加载场景...</h1>
+    <div class="watermark">Spatial Interface - Eidos</div>
+</div>
+
+<div id="viewer"></div>
+<div id="bottomSceneBar"></div>
+
+<div class="custom-modal-overlay" id="infoModalOverlay" onclick="closeInfoModal()">
+    <div class="custom-modal-box" onclick="event.stopPropagation()">
+        <div class="custom-modal-header">
+            <h3 class="custom-modal-title" id="infoModalTitle">标题</h3>
+            <button class="custom-modal-close" onclick="closeInfoModal()">×</button>
+        </div>
+        <div class="custom-modal-body" id="infoModalDesc">内容描述</div>
     </div>
+</div>
 
-    <div id="viewer"></div>
+<script type="importmap"> { "imports": { "three": "https://fastly.jsdelivr.net/npm/three/build/three.module.js", "@photo-sphere-viewer/core": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js", "@photo-sphere-viewer/markers-plugin": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js" } } </script>
 
-    <script type="importmap"> { "imports": { "three": "https://cdn.jsdelivr.net/npm/three/build/three.module.js", "@photo-sphere-viewer/core": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js", "@photo-sphere-viewer/markers-plugin": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js" } } </script>
+<script type="module">
+    import { Viewer } from '@photo-sphere-viewer/core';
+    import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
 
-    <script type="module">
-        import { Viewer } from '@photo-sphere-viewer/core';
-        import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
+    // 将引擎实例提升为全局变量，方便复用
+    let viewer = null;
+    let markersPlugin = null;
+    let allScenes = [];
 
-        // 获取 URL 中的 ID 参数
-        const urlParams = new URLSearchParams(window.location.search);
-        const sceneId = urlParams.get('id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSceneId = urlParams.get('id');
 
-        if (!sceneId) {
-            document.getElementById('titleObj').innerText = "错误：未指定场景 ID";
-        } else {
-            initViewer(sceneId);
+    if (!initialSceneId) {
+        document.getElementById('titleObj').innerText = "错误：未指定场景 ID";
+    } else {
+        initApp(initialSceneId);
+    }
+
+    // 初始化整个应用 (只执行一次)
+    async function initApp(startId) {
+        try {
+            // 1. 先拉取当前场景，确定它是谁
+            const res = await fetch(`/api/scenes/${startId}`);
+            const data = await res.json();
+            if (!data.success) return document.getElementById('titleObj').innerText = "场景加载失败或已被删除";
+
+            const currentScene = data.scene;
+            const mainId = currentScene.parent_id ? currentScene.parent_id : currentScene.id;
+
+            // 2. 拉取整个漫游项目的所有房间（缓存下来，以后切换就不需要再请求整个列表了）
+            const mainRes = await fetch(`/api/scenes/${mainId}`);
+            const mainData = await mainRes.json();
+            allScenes.push(mainData.scene);
+
+            const subsRes = await fetch(`/api/scenes/${mainId}/subs?ownerId=${currentScene.owner_id}`);
+            const subsData = await subsRes.json();
+            if(subsData.subs) allScenes = allScenes.concat(subsData.subs);
+
+            // 3. 首次加载当前场景
+            await switchToScene(startId, true);
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('titleObj').innerText = "网络加载异常";
         }
+    }
 
-        async function initViewer(id) {
-            try {
-                // 调用后端接口获取数据（不传 ownerId，此时只能看不能改）
-                const res = await fetch(`/api/scenes/${id}`);
-                const data = await res.json();
-                
-                if (!data.success) {
-                    document.getElementById('titleObj').innerText = "场景加载失败或已被删除";
-                    return;
+    // ================= 核心：无缝切换场景逻辑 =================
+    // 这个函数会被暴露给全局，供底部导航栏点击使用
+    window.switchToScene = async (targetId, isFirstLoad = false) => {
+        const titleEl = document.getElementById('titleObj');
+        titleEl.innerText = "正在穿越..."; // 切换时的过渡提示
+
+        try {
+            // 请求目标场景的具体标记数据
+            const res = await fetch(`/api/scenes/${targetId}`);
+            const data = await res.json();
+            const targetScene = data.scene;
+
+            // 1. 更新顶部标题
+            titleEl.innerText = targetScene.title || '全景漫游';
+
+            // 2. 格式化目标场景的标记
+            const formattedMarkers = data.markers.map(m => {
+                let targetName = m.title;
+                const isArrow = m.target_scene_id !== null && m.target_scene_id !== 0;
+
+                if (isArrow) {
+                    const ts = allScenes.find(s => s.id == m.target_scene_id);
+                    if (ts) {
+                        const tsIndex = allScenes.indexOf(ts);
+                        targetName = ts.parent_id === null ? '主场景' : `位置${tsIndex}`;
+                    }
                 }
 
-                document.getElementById('titleObj').innerText = data.scene.title || '全景漫游';
+                const iconClass = isArrow ? 'marker-icon-arrow' : 'marker-icon-info';
+                return {
+                    id: `m-${m.id}`,
+                    position: { yaw: parseFloat(m.yaw), pitch: parseFloat(m.pitch) },
+                    html: `<div class="marker-custom-wrapper">
+                                   <div class="marker-label">${targetName}</div>
+                                   <div class="${iconClass}"></div>
+                               </div>`,
+                    size: { width: 80, height: 50 },
+                    anchor: 'bottom center',
+                    tooltip: { content: isArrow ? `前往：${m.title}` : m.title },
+                    data: { targetId: m.target_scene_id, desc: m.description, title: m.title }
+                };
+            });
 
-                // 格式化标记 (完全沿用自定义 CSS)
-                const formattedMarkers = data.markers.map(m => {
-                    const isArrow = m.target_scene_id !== null && m.target_scene_id !== 0;
-                    return {
-                        id: `m-${m.id}`,
-                        position: { yaw: parseFloat(m.yaw), pitch: parseFloat(m.pitch) },
-                        html: isArrow ? `<div class="marker-custom marker-arrow"></div>` : `<div class="marker-custom marker-info"></div>`,
-                        size: { width: 32, height: 32 },
-                        anchor: 'center center',
-                        tooltip: { content: isArrow ? `前往：${m.title}` : m.title },
-                        data: { targetId: m.target_scene_id, desc: m.description } // 存入跳转目标和描述
-                    };
-                });
+            // 3. 更新底部的毛玻璃导航栏（改变选中状态框）
+            renderBottomBar(targetId);
 
-                const viewer = new Viewer({
+            // 4. 【神级性能优化】：如果引擎已经存在，直接调用 setPanorama 替换贴图，不刷新网页！
+            if (isFirstLoad || !viewer) {
+                // 第一次加载，老老实实创建引擎
+                // 第一次加载，老老实实创建引擎
+                viewer = new Viewer({
                     container: document.querySelector('#viewer'),
-                    panorama: data.scene.image_url,
+                    panorama: targetScene.image_url,
                     defaultZoomLvl: 0,
-                    navbar: ['autorotate', 'zoom', 'fullscreen'],
+                    // 【新增】：自定义底部导航栏，完美融合一个“下载原图”的 SVG 原生按钮
+                    navbar: [
+                        'autorotate', 'zoom',
+                        {
+                            id: 'download',
+                            title: '下载原图',
+                            content: '<svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor; transform: translateY(2px);"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
+                            onClick: (viewer) => {
+                                // 顶部标题变更为下载提示
+                                const oldText = titleEl.innerText;
+                                titleEl.innerText = "⬇️ 正在拉取原图，请稍候...";
+
+                                // 强制下载大图逻辑
+                                fetch(viewer.config.panorama)
+                                    .then(res => res.blob())
+                                    .then(blob => {
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = (targetScene.title || '全景原图') + '.jpg';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+                                        titleEl.innerText = oldText; // 恢复标题
+                                    })
+                                    .catch(() => {
+                                        alert('下载失败，请检查网络');
+                                        titleEl.innerText = oldText;
+                                    });
+                            }
+                        },
+                        'fullscreen'
+                    ],
                     plugins: [ [MarkersPlugin, { markers: formattedMarkers }] ]
                 });
 
-                const markersPlugin = viewer.getPlugin(MarkersPlugin);
+                markersPlugin = viewer.getPlugin(MarkersPlugin);
 
-                // 漫游核心逻辑：点击箭头跳转房间
+                // 绑定点击事件
                 markersPlugin.addEventListener('select-marker', (e, marker) => {
                     const m = marker || e.marker;
                     if (m.data.targetId) {
-                        // 如果是跳转点，直接刷新页面切换到目标房间 ID
-                        window.location.href = `/view.html?id=${m.data.targetId}`;
-                    } else if (m.data.desc) {
-                        // 如果是信息点且有描述，可以弹窗显示 (这里简单使用 alert 演示，你可以自己加漂亮弹窗)
-                        alert(`${m.tooltip.content}\n\n${m.data.desc}`);
+                        // 【核心修改】：点击箭头不再刷新网页，而是调用我们的无缝切换函数！
+                        window.switchToScene(m.data.targetId);
+                    } else {
+                        const title = m.data.title || '详细信息';
+                        const desc = m.data.desc || '暂无描述内容';
+                        showInfoModal(title, desc);
                     }
                 });
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('titleObj').innerText = "网络加载异常";
+            } else {
+                // 非首次加载，直接平滑替换全景图和热点
+                await viewer.setPanorama(targetScene.image_url);
+                markersPlugin.setMarkers(formattedMarkers);
             }
+
+        } catch(e) {
+            console.error(e);
+            titleEl.innerText = "场景切换失败";
         }
-    </script>
+    };
+
+    // 抽离出来的底部导航栏渲染函数
+    function renderBottomBar(activeId) {
+        const bottomBar = document.getElementById('bottomSceneBar');
+        bottomBar.innerHTML = allScenes.map((s, index) => {
+            const label = s.parent_id === null ? '主场景' : `位置${index}`;
+            const isActive = s.id == activeId ? 'active' : '';
+            // 【核心修改】：点击底部缩略图也改成无缝切换，不再刷新网页
+            return `
+                    <div class="scene-thumb-item ${isActive}" onclick="window.switchToScene(${s.id})">
+                        <img src="${s.image_url}" class="scene-thumb-img">
+                        <div class="scene-thumb-label">${label}</div>
+                    </div>
+                `;
+        }).join('');
+        bottomBar.style.display = allScenes.length > 1 ? 'flex' : 'none';
+    }
+
+    // 弹窗控制逻辑
+    window.showInfoModal = (title, desc) => {
+        document.getElementById('infoModalTitle').innerText = title || '详细信息';
+        document.getElementById('infoModalDesc').innerText = desc || '暂无描述';
+        const overlay = document.getElementById('infoModalOverlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => overlay.classList.add('active'), 10);
+    };
+    window.closeInfoModal = () => {
+        const overlay = document.getElementById('infoModalOverlay');
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.style.display = 'none', 300);
+    };
+</script>
 </body>
 </html>
