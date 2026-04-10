@@ -7,56 +7,351 @@
     <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css">
     <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #111; font-family: 'Segoe UI', sans-serif;}
-        #viewer { width: 100%; height: 100%; }
-        .info-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%); color: white; z-index: 10; pointer-events: none; }
-        .scene-title { margin: 0; font-size: 24px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .watermark { font-size: 12px; opacity: 0.7; margin-top: 5px; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #111;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #viewer {
+            width: 100%;
+            height: 100%;
+        }
+        .info-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+            color: white;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .scene-title {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .watermark {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
 
-        .marker-custom-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; pointer-events: none; }
-        .marker-label { background: rgba(0, 0, 0, 0.6); color: #fff; padding: 5px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 8px; pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); }
-        .marker-icon-arrow { width: 28px; height: 28px; position: relative; pointer-events: auto; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); transition: transform 0.2s; }
-        .marker-icon-arrow::before { content: ''; position: absolute; top: 30%; left: 50%; width: 14px; height: 14px; border-left: 3px solid #fff; border-bottom: 3px solid #fff; transform: translate(-50%, -50%) rotate(-45deg); }
-        .marker-custom-wrapper:hover .marker-icon-arrow { transform: translateY(-5px); }
-        .marker-icon-info { width: 28px; height: 28px; position: relative; pointer-events: auto; cursor: pointer; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; backdrop-filter: blur(4px); transition: all 0.2s; display: flex; justify-content: center; align-items: center; }
-        .marker-icon-info::after { content: 'i'; color: #fff; font-weight: bold; font-family: serif; font-style: italic; }
-        .marker-custom-wrapper:hover .marker-icon-info { transform: scale(1.15); background: #3478f6; border-color: #3478f6; }
+        .marker-custom-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            pointer-events: none;
+        }
+        .marker-label {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            pointer-events: auto;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .marker-icon-arrow {
+            width: 28px;
+            height: 28px;
+            position: relative;
+            pointer-events: auto;
+            cursor: pointer;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+            transition: transform 0.2s;
+        }
+        .marker-icon-arrow::before {
+            content: '';
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            width: 14px;
+            height: 14px;
+            border-left: 3px solid #fff;
+            border-bottom: 3px solid #fff;
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+        .marker-custom-wrapper:hover .marker-icon-arrow {
+            transform: translateY(-5px);
+        }
+        .marker-icon-info {
+            width: 28px;
+            height: 28px;
+            position: relative;
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .marker-icon-info::after {
+            content: 'i';
+            color: #fff;
+            font-weight: bold;
+            font-family: serif;
+            font-style: italic;
+        }
+        .marker-custom-wrapper:hover .marker-icon-info {
+            transform: scale(1.15);
+            background: #3478f6;
+            border-color: #3478f6;
+        }
 
-        #mainSceneBar { position: absolute; bottom: 270px; left: 50%; transform: translateX(-50%); background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 30px; z-index: 20; display: none; gap: 10px; max-width: 90%; overflow-x: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.4); white-space: nowrap; border: 1px solid rgba(255,255,255,0.1); }
-        #mainSceneBar::-webkit-scrollbar { display: none; }
-        .main-scene-pill { display: inline-block; padding: 6px 18px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 20px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
-        .main-scene-pill:hover { background: rgba(255,255,255,0.25); color: #fff; }
-        .main-scene-pill.active { background: #3478f6; color: #fff; font-weight: bold; box-shadow: 0 0 10px rgba(52,120,246,0.6); border: 1px solid #3478f6; }
+        #mainSceneBar {
+            position: absolute;
+            bottom: 270px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 30px;
+            z-index: 20;
+            display: none;
+            gap: 10px;
+            max-width: 90%;
+            overflow-x: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #mainSceneBar::-webkit-scrollbar {
+            display: none;
+        }
+        .main-scene-pill {
+            display: inline-block;
+            padding: 6px 18px;
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .main-scene-pill:hover {
+            background: rgba(255,255,255,0.25);
+            color: #fff;
+        }
+        .main-scene-pill.active {
+            background: #3478f6;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(52,120,246,0.6);
+            border: 1px solid #3478f6;
+        }
 
-        #bottomSceneBar { position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%); background: rgba(30, 30, 30, 0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px; border-radius: 8px; z-index: 20; display: none; gap: 15px; max-width: 90%; overflow-x: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        #bottomSceneBar::-webkit-scrollbar { height: 6px; }
-        #bottomSceneBar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
-        .scene-thumb-item { width: 80px; display: flex; flex-direction: column; cursor: pointer; position: relative; transition: transform 0.2s; }
-        .scene-thumb-item:hover { transform: translateY(-3px); }
-        .scene-thumb-img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; border: 2px solid transparent; box-sizing: border-box; transition: border-color 0.2s; }
-        .scene-thumb-item.active .scene-thumb-img { border-color: #f97316; }
-        .scene-thumb-label { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); color: white; text-align: center; font-size: 12px; padding: 4px 0; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; pointer-events: none; }
+        #bottomSceneBar {
+            position: absolute;
+            bottom: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 20;
+            display: none;
+            gap: 15px;
+            max-width: 90%;
+            overflow-x: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        #bottomSceneBar::-webkit-scrollbar {
+            height: 6px;
+        }
+        #bottomSceneBar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+        .scene-thumb-item {
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .scene-thumb-item:hover {
+            transform: translateY(-3px);
+        }
+        .scene-thumb-img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .scene-thumb-item.active .scene-thumb-img {
+            border-color: #f97316;
+        }
+        .scene-thumb-label {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            padding: 4px 0;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+            pointer-events: none;
+        }
 
-        #directionIndicator { position: absolute; bottom: 20px; left: 50%; width: 140px; height: 140px; transform: translateX(-50%); z-index: 25; pointer-events: none; opacity: 0; transition: opacity 0.4s ease; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; }
-        #directionIndicator::after { content: ''; position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(52, 120, 246, 0.8); }
-        .compass-pointer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transition: transform 0.1s linear; }
-        .compass-pointer svg { position: absolute; top: -15px; left: 50%; margin-left: -18px; width: 36px; height: 36px; fill: rgba(255,255,255,0.8); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); transition: all 0.2s; pointer-events: auto; cursor: pointer; }
-        .compass-pointer svg.facing { fill: #3478f6; filter: drop-shadow(0 0 12px rgba(52,120,246,0.9)); transform: scale(1.15); }
-        .compass-pointer svg:hover { fill: #f97316; filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.9)); transform: scale(1.3); }
+        #directionIndicator {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            width: 140px;
+            height: 140px;
+            transform: translateX(-50%);
+            z-index: 25;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+        }
+        #directionIndicator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(52, 120, 246, 0.8);
+        }
+        .compass-pointer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            transition: transform 0.1s linear;
+        }
+        .compass-pointer svg {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            margin-left: -18px;
+            width: 36px;
+            height: 36px;
+            fill: rgba(255,255,255,0.8);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+            transition: all 0.2s;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        .compass-pointer svg.facing {
+            fill: #3478f6;
+            filter: drop-shadow(0 0 12px rgba(52,120,246,0.9));
+            transform: scale(1.15);
+        }
+        .compass-pointer svg:hover {
+            fill: #f97316;
+            filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.9));
+            transform: scale(1.3);
+        }
 
-        .custom-modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
-        .custom-modal-overlay.active { display: flex; opacity: 1; }
-        .custom-modal-box { background: #222; color: #fff; width: 90%; max-width: 650px; max-height: 80vh; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); transform: translateY(20px); transition: transform 0.3s; }
-        .custom-modal-overlay.active .custom-modal-box { transform: translateY(0); }
-        .custom-modal-header { padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .custom-modal-title { margin: 0; font-size: 22px; font-weight: 600; }
-        .custom-modal-close { background: transparent; border: none; color: #999; font-size: 28px; cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }
-        .custom-modal-close:hover { color: #ef4444; }
-        .custom-modal-body { padding: 25px; overflow-y: auto; font-size: 16px; line-height: 1.6; color: #ddd; white-space: pre-wrap; }
+        .custom-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .custom-modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        .custom-modal-box {
+            background: #222;
+            color: #fff;
+            width: 90%;
+            max-width: 650px;
+            max-height: 80vh;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        .custom-modal-overlay.active .custom-modal-box {
+            transform: translateY(0);
+        }
+        .custom-modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .custom-modal-title {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .custom-modal-close {
+            background: transparent;
+            border: none;
+            color: #999;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .custom-modal-close:hover {
+            color: #ef4444;
+        }
+        .custom-modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #ddd;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
-<div class="info-bar"><h1 class="scene-title" id="titleObj">正在加载场景...</h1><div class="watermark">Spatial Interface - Eidos</div></div>
+<div class="info-bar">
+    <h1 class="scene-title" id="titleObj">正在加载场景...</h1>
+    <div class="watermark">Spatial Interface - Eidos</div>
+</div>
 
 <div id="viewer"></div>
 <div id="mainSceneBar"></div>
@@ -65,81 +360,252 @@
 
 <div class="custom-modal-overlay" id="infoModalOverlay" onclick="window.closeInfoModal()">
     <div class="custom-modal-box" onclick="event.stopPropagation()">
-        <div class="custom-modal-header"><h3 class="custom-modal-title" id="infoModalTitle">标题</h3><button class="custom-modal-close" onclick="window.closeInfoModal()">×</button></div>
+        <div class="custom-modal-header">
+            <h3 class="custom-modal-title" id="infoModalTitle">标题</h3>
+            <button class="custom-modal-close" onclick="window.closeInfoModal()">×</button>
+        </div>
         <div class="custom-modal-body" id="infoModalDesc">内容描述</div>
     </div>
 </div>
 
-<script type="importmap"> { "imports": { "three": "https://fastly.jsdelivr.net/npm/three/build/three.module.js", "@photo-sphere-viewer/core": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js", "@photo-sphere-viewer/markers-plugin": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js" } } </script>
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://fastly.jsdelivr.net/npm/three/build/three.module.js",
+            "@photo-sphere-viewer/core": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/core/index.module.js",
+            "@photo-sphere-viewer/markers-plugin": "https://fastly.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.module.js"
+        }
+    }
+</script>
 <script type="module">
     import { Viewer } from '@photo-sphere-viewer/core';
     import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
 
-    let viewer = null; let markersPlugin = null; let projectScenes = []; let projectMainId = null; let currentAreaId = null;
-    const urlParams = new URLSearchParams(window.location.search); const initialSceneId = urlParams.get('id');
+    let viewer = null;
+    let markersPlugin = null;
+    let projectScenes = [];
+    let projectMainId = null;
+    let currentAreaId = null;
 
-    if (!initialSceneId) document.getElementById('titleObj').innerText = "错误：未指定场景 ID"; else initApp(initialSceneId);
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSceneId = urlParams.get('id');
+
+    if (!initialSceneId) {
+        document.getElementById('titleObj').innerText = "错误：未指定场景 ID";
+    } else {
+        initApp(initialSceneId);
+    }
 
     const getAreas = () => projectScenes.filter(s => s.id == projectMainId || (s.parent_id == projectMainId && s.is_group == 1));
     const getRooms = (areaId) => projectScenes.filter(s => s.parent_id == areaId && s.is_group == 0);
 
     async function initApp(startId) {
         try {
-            const r = await fetch(`/api/scenes-tree/${startId}`); const data = await r.json();
-            if (!data.success) return document.getElementById('titleObj').innerText = "场景已被删除或不存在";
+            const r = await fetch(`/api/scenes-tree/${startId}`);
+            const data = await r.json();
 
-            projectMainId = data.projectMainId; projectScenes = data.scenes;
+            if (!data.success) {
+                return document.getElementById('titleObj').innerText = "场景已被删除或不存在";
+            }
+
+            projectMainId = data.projectMainId;
+            projectScenes = data.scenes;
             await window.switchToScene(startId, true);
-        } catch (err) { document.getElementById('titleObj').innerText = "网络加载异常"; }
+        } catch (err) {
+            document.getElementById('titleObj').innerText = "网络加载异常";
+        }
     }
 
     window.switchToScene = async (targetId, isFirstLoad = false) => {
-        const titleEl = document.getElementById('titleObj'); titleEl.innerText = "正在穿越...";
+        const titleEl = document.getElementById('titleObj');
+        titleEl.innerText = "正在穿越...";
+
         try {
             const targetScene = projectScenes.find(s => s.id == targetId);
             titleEl.innerText = targetScene.title || '全景漫游';
             const targetAreaId = (targetScene.is_group || targetScene.id == projectMainId) ? targetScene.id : targetScene.parent_id;
 
-            if (isFirstLoad || targetAreaId !== currentAreaId) { currentAreaId = targetAreaId; renderMainSceneBar(); }
+            if (isFirstLoad || targetAreaId !== currentAreaId) {
+                currentAreaId = targetAreaId;
+                renderMainSceneBar();
+            }
             renderBottomBar(targetId);
 
-            const mRes = await fetch(`/api/scenes/${targetId}`); const mData = await mRes.json();
+            const mRes = await fetch(`/api/scenes/${targetId}`);
+            const mData = await mRes.json();
+
             const formattedMarkers = mData.markers.map(m => {
-                let targetName = m.title; const isArrow = m.target_scene_id !== null && m.target_scene_id !== 0;
-                if (isArrow) { const ts = projectScenes.find(s => s.id == m.target_scene_id); if (ts) targetName = ts.title; }
-                return { id: `m-${m.id}`, position: { yaw: parseFloat(m.yaw), pitch: parseFloat(m.pitch) }, html: `<div class="marker-custom-wrapper"><div class="marker-label">${targetName}</div><div class="${isArrow ? 'marker-icon-arrow' : 'marker-icon-info'}"></div></div>`, size: { width: 80, height: 50 }, anchor: 'bottom center', tooltip: { content: m.title }, data: { targetId: m.target_scene_id, desc: m.description, title: m.title } };
+                let targetName = m.title;
+                const isArrow = m.target_scene_id !== null && m.target_scene_id !== 0;
+
+                if (isArrow) {
+                    const ts = projectScenes.find(s => s.id == m.target_scene_id);
+                    if (ts) targetName = ts.title;
+                }
+
+                return {
+                    id: `m-${m.id}`,
+                    position: { yaw: parseFloat(m.yaw), pitch: parseFloat(m.pitch) },
+                    html: `
+                        <div class="marker-custom-wrapper">
+                            <div class="marker-label">${targetName}</div>
+                            <div class="${isArrow ? 'marker-icon-arrow' : 'marker-icon-info'}"></div>
+                        </div>`,
+                    size: { width: 80, height: 50 },
+                    anchor: 'bottom center',
+                    tooltip: { content: m.title },
+                    data: { targetId: m.target_scene_id, desc: m.description, title: m.title }
+                };
             });
 
             if (isFirstLoad || !viewer) {
                 viewer = new Viewer({
-                    container: document.querySelector('#viewer'), panorama: targetScene.image_url, defaultZoomLvl: 0,
-                    navbar: [ 'autorotate', 'zoom', { id: 'download', title: '下载原图', content: '<svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor; transform: translateY(2px);"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>', onClick: (v) => { const old = titleEl.innerText; titleEl.innerText = "⬇️ 正在拉取原图..."; fetch(v.config.panorama).then(r=>r.blob()).then(b=>{const url=URL.createObjectURL(b);const a=document.createElement('a');a.href=url;a.download=(targetScene.title)+'.jpg';document.body.appendChild(a);a.click();URL.revokeObjectURL(url);a.remove();titleEl.innerText=old;}); } }, 'fullscreen' ],
-                    plugins: [ [MarkersPlugin, { markers: formattedMarkers }] ]
+                    container: document.querySelector('#viewer'),
+                    panorama: targetScene.image_url,
+                    defaultZoomLvl: 0,
+                    navbar: [
+                        'autorotate',
+                        'zoom',
+                        {
+                            id: 'download',
+                            title: '下载原图',
+                            content: '<svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor; transform: translateY(2px);"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
+                            onClick: (v) => {
+                                const old = titleEl.innerText;
+                                titleEl.innerText = "⬇️ 正在拉取原图...";
+                                fetch(v.config.panorama)
+                                    .then(r => r.blob())
+                                    .then(b => {
+                                        const url = URL.createObjectURL(b);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = (targetScene.title) + '.jpg';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        URL.revokeObjectURL(url);
+                                        a.remove();
+                                        titleEl.innerText = old;
+                                    });
+                            }
+                        },
+                        'fullscreen'
+                    ],
+                    plugins: [
+                        [MarkersPlugin, { markers: formattedMarkers }]
+                    ]
                 });
+
                 markersPlugin = viewer.getPlugin(MarkersPlugin);
-                markersPlugin.addEventListener('select-marker', (e, marker) => { const m=marker||e.marker; if(m.data.targetId) window.switchToScene(m.data.targetId); else window.showInfoModal(m.data.title, m.data.desc); });
+                markersPlugin.addEventListener('select-marker', (e, marker) => {
+                    const m = marker || e.marker;
+                    if (m.data.targetId) {
+                        window.switchToScene(m.data.targetId);
+                    } else {
+                        window.showInfoModal(m.data.title, m.data.desc);
+                    }
+                });
             } else {
-                await viewer.setPanorama(targetScene.image_url); markersPlugin.setMarkers(formattedMarkers);
+                await viewer.setPanorama(targetScene.image_url);
+                markersPlugin.setMarkers(formattedMarkers);
             }
 
-            const jumpMarkers = formattedMarkers.filter(m => m.data.targetId); const indicatorContainer = document.getElementById('directionIndicator');
+            const jumpMarkers = formattedMarkers.filter(m => m.data.targetId);
+            const indicatorContainer = document.getElementById('directionIndicator');
+
             if (jumpMarkers.length > 0) {
-                indicatorContainer.style.opacity = '1'; indicatorContainer.innerHTML = '';
+                indicatorContainer.style.opacity = '1';
+                indicatorContainer.innerHTML = '';
+
                 const pointers = jumpMarkers.map(marker => {
-                    const ptr = document.createElement('div'); ptr.className = 'compass-pointer'; ptr.onclick = () => window.switchToScene(marker.data.targetId);
-                    ptr.innerHTML = `<svg viewBox="0 0 24 24"><title>前往: ${marker.tooltip.content}</title><path d="M12 2L4 20l8-3 8 3z"/></svg>`; indicatorContainer.appendChild(ptr); return { element: ptr, targetYaw: marker.position.yaw };
+                    const ptr = document.createElement('div');
+                    ptr.className = 'compass-pointer';
+                    ptr.onclick = () => window.switchToScene(marker.data.targetId);
+                    ptr.innerHTML = `
+                        <svg viewBox="0 0 24 24">
+                            <title>前往: ${marker.tooltip.content}</title>
+                            <path d="M12 2L4 20l8-3 8 3z"/>
+                        </svg>`;
+                    indicatorContainer.appendChild(ptr);
+                    return { element: ptr, targetYaw: marker.position.yaw };
                 });
-                if (window.currentCompassTracker) viewer.removeEventListener('position-updated', window.currentCompassTracker);
-                window.currentCompassTracker = () => { const currentYaw = viewer.getPosition().yaw; pointers.forEach(p => { let diff = p.targetYaw - currentYaw; while (diff <= -Math.PI) diff += 2 * Math.PI; while (diff > Math.PI) diff -= 2 * Math.PI; p.element.style.transform = `rotate(${diff * (180 / Math.PI)}deg)`; const svg = p.element.querySelector('svg'); if (Math.abs(diff) < 0.3) svg.classList.add('facing'); else svg.classList.remove('facing'); }); };
-                viewer.addEventListener('position-updated', window.currentCompassTracker); window.currentCompassTracker();
-            } else { indicatorContainer.style.opacity = '0'; indicatorContainer.innerHTML = ''; }
-        } catch(e) { titleEl.innerText = "场景切换失败"; }
+
+                if (window.currentCompassTracker) {
+                    viewer.removeEventListener('position-updated', window.currentCompassTracker);
+                }
+
+                window.currentCompassTracker = () => {
+                    const currentYaw = viewer.getPosition().yaw;
+                    pointers.forEach(p => {
+                        let diff = p.targetYaw - currentYaw;
+                        while (diff <= -Math.PI) diff += 2 * Math.PI;
+                        while (diff > Math.PI) diff -= 2 * Math.PI;
+
+                        p.element.style.transform = `rotate(${diff * (180 / Math.PI)}deg)`;
+                        const svg = p.element.querySelector('svg');
+
+                        if (Math.abs(diff) < 0.3) {
+                            svg.classList.add('facing');
+                        } else {
+                            svg.classList.remove('facing');
+                        }
+                    });
+                };
+
+                viewer.addEventListener('position-updated', window.currentCompassTracker);
+                window.currentCompassTracker();
+            } else {
+                indicatorContainer.style.opacity = '0';
+                indicatorContainer.innerHTML = '';
+            }
+        } catch(e) {
+            titleEl.innerText = "场景切换失败";
+        }
     };
 
-    function renderMainSceneBar() { const bar = document.getElementById('mainSceneBar'); const areas = getAreas(); if (areas.length <= 1) { bar.style.display = 'none'; return; } bar.innerHTML = areas.map(s => `<div class="main-scene-pill ${s.id == currentAreaId ? 'active' : ''}" onclick="window.switchToScene(${s.id})">${s.title}</div>`).join(''); bar.style.display = 'block'; }
-    function renderBottomBar(activeId) { const bottomBar = document.getElementById('bottomSceneBar'); const rooms = getRooms(currentAreaId); bottomBar.innerHTML = rooms.map(s => `<div class="scene-thumb-item ${s.id == activeId ? 'active' : ''}" onclick="window.switchToScene(${s.id})"><img src="${s.image_url}" class="scene-thumb-img" loading="lazy" decoding="async"><div class="scene-thumb-label">${s.title}</div></div>`).join(''); bottomBar.style.display = rooms.length > 0 ? 'flex' : 'none'; }
-    window.showInfoModal = (title, desc) => { document.getElementById('infoModalTitle').innerText = title; document.getElementById('infoModalDesc').innerText = desc; const o = document.getElementById('infoModalOverlay'); o.style.display = 'flex'; setTimeout(() => o.classList.add('active'), 10); };
-    window.closeInfoModal = () => { const o = document.getElementById('infoModalOverlay'); o.classList.remove('active'); setTimeout(() => o.style.display = 'none', 300); };
+    function renderMainSceneBar() {
+        const bar = document.getElementById('mainSceneBar');
+        const areas = getAreas();
+
+        if (areas.length <= 1) {
+            bar.style.display = 'none';
+            return;
+        }
+
+        bar.innerHTML = areas.map(s => `
+            <div class="main-scene-pill ${s.id == currentAreaId ? 'active' : ''}" onclick="window.switchToScene(${s.id})">
+                ${s.title}
+            </div>
+        `).join('');
+        bar.style.display = 'block';
+    }
+
+    function renderBottomBar(activeId) {
+        const bottomBar = document.getElementById('bottomSceneBar');
+        const rooms = getRooms(currentAreaId);
+
+        bottomBar.innerHTML = rooms.map(s => `
+            <div class="scene-thumb-item ${s.id == activeId ? 'active' : ''}" onclick="window.switchToScene(${s.id})">
+                <img src="${s.image_url}" class="scene-thumb-img" loading="lazy" decoding="async">
+                <div class="scene-thumb-label">${s.title}</div>
+            </div>
+        `).join('');
+
+        bottomBar.style.display = rooms.length > 0 ? 'flex' : 'none';
+    }
+
+    window.showInfoModal = (title, desc) => {
+        document.getElementById('infoModalTitle').innerText = title;
+        document.getElementById('infoModalDesc').innerText = desc;
+        const o = document.getElementById('infoModalOverlay');
+        o.style.display = 'flex';
+        setTimeout(() => o.classList.add('active'), 10);
+    };
+
+    window.closeInfoModal = () => {
+        const o = document.getElementById('infoModalOverlay');
+        o.classList.remove('active');
+        setTimeout(() => o.style.display = 'none', 300);
+    };
 </script>
 </body>
 </html>
