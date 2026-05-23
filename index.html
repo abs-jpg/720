@@ -777,7 +777,7 @@
                 return `
                     <div class="card" onclick="window.open('/view.html?id=${s.id}', '_blank')">
                         <div class="card-img-container">
-                            <img src="${s.image_url}" class="card-img" loading="lazy" decoding="async">
+                            <img src="${s.thumb_url || s.image_url}" class="card-img" loading="lazy" decoding="async">
                             ${overlayActions}
                         </div>
                         <div class="card-info">
@@ -947,14 +947,14 @@
     function renderSidebarLists() {
         document.getElementById('mainSceneList').innerHTML = getAreas().map(s => `
             <div class="thumb-item ${s.id == currentAreaId ? 'active' : ''}" style="overflow:hidden; opacity: ${s.id == currentAreaId ? '1' : '0.5'};" onclick="window.selectArea(${s.id})">
-                <img src="${s.image_url}" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:cover;">
+                <img src="${s.thumb_url || s.image_url}" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:cover;">
                 ${s.id != projectMainId ? `<div class="btn-delete-thumb" onclick="event.stopPropagation(); window.deleteScene(${s.id})">×</div>` : ''}
                 <span style="background:${s.id == currentAreaId ? 'rgba(52,120,246,0.9)' : 'rgba(0,0,0,0.7)'};">${s.id == projectMainId ? '' : ''}${s.title}</span>
             </div>`).join('');
 
         document.getElementById('thumbList').innerHTML = getRooms(currentAreaId).map(s => `
             <div class="thumb-item ${s.id == editingSceneId ? 'active' : ''}" style="overflow:hidden;" onclick="window.switchEditScene(${s.id})">
-                <img src="${s.image_url}" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:cover;">
+                <img src="${s.thumb_url || s.image_url}" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:cover;">
                 <div class="btn-delete-thumb" onclick="event.stopPropagation(); window.deleteScene(${s.id})">×</div>
                 <span>${s.title}</span>
             </div>`).join('');

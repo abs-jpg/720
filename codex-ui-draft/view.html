@@ -656,7 +656,7 @@
                             onClick: (v) => {
                                 const old = titleEl.innerText;
                                 titleEl.innerText = "⬇️ 正在拉取原图...";
-                                fetch(v.config.panorama)
+                                fetch(targetScene.original_url || targetScene.image_url)
                                     .then(r => r.blob())
                                     .then(b => {
                                         const url = URL.createObjectURL(b);
@@ -767,7 +767,7 @@
 
         bottomBar.innerHTML = rooms.map(s => `
             <div class="scene-thumb-item ${s.id == activeId ? 'active' : ''}" onclick="window.switchToScene(${s.id})">
-                <img src="${s.image_url}" class="scene-thumb-img" loading="lazy" decoding="async">
+                <img src="${s.thumb_url || s.image_url}" class="scene-thumb-img" loading="lazy" decoding="async">
                 <div class="scene-thumb-label">${s.title}</div>
             </div>
         `).join('');

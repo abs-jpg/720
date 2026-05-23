@@ -4,14 +4,30 @@ const path = require('path');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const fs = require('fs');
+const sharp = require('sharp');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 // 开启静态资源 30 天强缓存
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '30d' }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+    maxAge: '30d',
+    immutable: true,
+    etag: true,
+    lastModified: true
+}));
 
-if (!fs.existsSync(path.join(__dirname, 'uploads'))) fs.mkdirSync(path.join(__dirname, 'uploads'));
+sharp.concurrency(1);
+sharp.cache({ memory: 64, files: 0, items: 32 });
+
+const uploadRoot = path.join(__dirname, 'uploads');
+const originalDir = path.join(uploadRoot, 'original');
+const panoDir = path.join(uploadRoot, 'pano');
+const thumbDir = path.join(uploadRoot, 'thumb');
+
+[uploadRoot, originalDir, panoDir, thumbDir].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 // 数据库配置
 const dbConfig = { host: 'xxxxx', user: 'zxczcx', password: 'qweqwe', database: 'asda' };
@@ -20,30 +36,75 @@ const dbConfig = { host: 'xxxxx', user: 'zxczcx', password: 'qweqwe', database: 
 (async function autoUpgradeDB() {
     try {
         const connection = await mysql.createConnection(dbConfig);
-        await connection.execute('ALTER TABLE scenes ADD COLUMN is_group TINYINT(1) DEFAULT 0');
+        for (const sql of [
+            'ALTER TABLE scenes ADD COLUMN is_group TINYINT(1) DEFAULT 0',
+            'ALTER TABLE scenes ADD COLUMN original_url VARCHAR(255) DEFAULT NULL',
+            'ALTER TABLE scenes ADD COLUMN thumb_url VARCHAR(255) DEFAULT NULL'
+        ]) {
+            try { await connection.execute(sql); } catch (e) {}
+        }
         await connection.end();
     } catch (e) {}
 })();
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+    destination: (req, file, cb) => cb(null, originalDir),
+    filename: (req, file, cb) => {
+        const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+        cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+    }
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
+function getUploadPath(fileUrl) {
+    if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
+
+    const relativePath = path.normalize(decodeURIComponent(fileUrl.replace(/^\/uploads\//, '')));
+    const fullPath = path.join(uploadRoot, relativePath);
+    return (fullPath === uploadRoot || fullPath.startsWith(uploadRoot + path.sep)) ? fullPath : null;
+}
+
+function deleteUploadFile(fileUrl) {
+    const filePath = getUploadPath(fileUrl);
+    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No File' });
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const baseName = path.parse(req.file.filename).name;
+    const originalPath = req.file.path;
+    const displayName = `${baseName}.jpg`;
+    const thumbName = `${baseName}.jpg`;
+    const displayPath = path.join(panoDir, displayName);
+    const thumbPath = path.join(thumbDir, thumbName);
+    const originalUrl = `/uploads/original/${req.file.filename}`;
+    const imageUrl = `/uploads/pano/${displayName}`;
+    const thumbUrl = `/uploads/thumb/${thumbName}`;
     const ownerId = req.body.ownerId;
     const parentId = (req.body.parentId && req.body.parentId !== 'null') ? req.body.parentId : null;
     const isGroup = req.body.isGroup === 'true' ? 1 : 0;
     try {
+        await sharp(originalPath)
+            .rotate()
+            .resize({ width: 6000, withoutEnlargement: true })
+            .jpeg({ quality: 82, mozjpeg: true })
+            .toFile(displayPath);
+
+        await sharp(originalPath)
+            .rotate()
+            .resize({ width: 480, withoutEnlargement: true })
+            .jpeg({ quality: 76, mozjpeg: true })
+            .toFile(thumbPath);
+
         const connection = await mysql.createConnection(dbConfig);
         let title = parentId ? (isGroup ? '新区域(如二楼)' : '新房间') : '我的全景项目';
-        const [result] = await connection.execute('INSERT INTO scenes (image_url, title, owner_id, parent_id, is_group) VALUES (?, ?, ?, ?, ?)', [imageUrl, title, ownerId, parentId, isGroup]);
+        const [result] = await connection.execute('INSERT INTO scenes (image_url, original_url, thumb_url, title, owner_id, parent_id, is_group) VALUES (?, ?, ?, ?, ?, ?, ?)', [imageUrl, originalUrl, thumbUrl, title, ownerId, parentId, isGroup]);
         await connection.end();
-        res.json({ success: true, sceneId: result.insertId, imageUrl });
-    } catch (err) { res.status(500).json({ error: 'DB Error' }); }
+        res.json({ success: true, sceneId: result.insertId, imageUrl, originalUrl, thumbUrl });
+    } catch (err) {
+        [originalUrl, imageUrl, thumbUrl].forEach(deleteUploadFile);
+        res.status(500).json({ error: 'Upload Error' });
+    }
 });
 
 app.get('/api/scenes', async (req, res) => {
@@ -128,10 +189,10 @@ app.delete('/api/scenes/:id', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
         const pId = req.params.id;
-        const [allScenes] = await connection.execute(`SELECT id, image_url FROM scenes WHERE (id = ? OR parent_id = ? OR parent_id IN (SELECT id FROM (SELECT id FROM scenes WHERE parent_id = ? AND is_group = 1) AS t)) AND owner_id = ?`, [pId, pId, pId, ownerId]);
+        const [allScenes] = await connection.execute(`SELECT id, image_url, original_url, thumb_url FROM scenes WHERE (id = ? OR parent_id = ? OR parent_id IN (SELECT id FROM (SELECT id FROM scenes WHERE parent_id = ? AND is_group = 1) AS t)) AND owner_id = ?`, [pId, pId, pId, ownerId]);
         if (allScenes.length === 0) { await connection.end(); return res.json({ success: false }); }
         allScenes.forEach(s => {
-            if (s.image_url) { const filePath = path.join(__dirname, 'uploads', path.basename(s.image_url)); if (fs.existsSync(filePath)) fs.unlinkSync(filePath); }
+            [s.image_url, s.original_url, s.thumb_url].forEach(deleteUploadFile);
         });
         const deleteIds = allScenes.map(s => s.id);
         if (deleteIds.length > 0) {
