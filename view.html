@@ -398,6 +398,123 @@
             transform: scale(1.3);
         }
 
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.45s ease, visibility 0.45s ease;
+        }
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .loading-backdrop {
+            position: absolute;
+            inset: -24px;
+            background-size: cover;
+            background-position: center;
+            filter: blur(18px);
+            transform: scale(1.08);
+            opacity: 0.62;
+            transition: background-image 0.2s ease;
+        }
+        .loading-overlay::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at center, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.58) 72%),
+                linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.48));
+        }
+        .loading-content {
+            position: relative;
+            z-index: 1;
+            width: min(280px, 82vw);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.65);
+        }
+        .loading-sphere {
+            width: 104px;
+            height: 104px;
+            position: relative;
+            border-radius: 50%;
+            background:
+                linear-gradient(90deg, transparent 48%, rgba(255,255,255,0.68) 49%, rgba(255,255,255,0.68) 51%, transparent 52%),
+                linear-gradient(0deg, transparent 48%, rgba(255,255,255,0.52) 49%, rgba(255,255,255,0.52) 51%, transparent 52%);
+            border: 2px solid rgba(255,255,255,0.84);
+            box-shadow:
+                inset 0 0 18px rgba(96,165,250,0.22),
+                0 0 28px rgba(52,120,246,0.44);
+            transform-style: preserve-3d;
+            animation: loadingWireSphere 2.2s linear infinite;
+        }
+        .loading-sphere::before {
+            content: '';
+            position: absolute;
+            inset: 13px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.62);
+            background:
+                linear-gradient(90deg, transparent 47%, rgba(255,255,255,0.42) 48%, rgba(255,255,255,0.42) 52%, transparent 53%),
+                linear-gradient(0deg, transparent 47%, rgba(255,255,255,0.35) 48%, rgba(255,255,255,0.35) 52%, transparent 53%);
+            transform: rotateY(64deg);
+        }
+        .loading-sphere::after {
+            content: '';
+            position: absolute;
+            inset: 24px -7px;
+            border-radius: 50%;
+            border: 1px solid rgba(96,165,250,0.74);
+            transform: rotateX(66deg);
+            box-shadow: 0 0 16px rgba(96,165,250,0.34);
+        }
+        .loading-progress {
+            width: 100%;
+            height: 8px;
+            margin-top: 24px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.18);
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 8px 24px rgba(0,0,0,0.28);
+        }
+        .loading-progress-fill {
+            width: 0%;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #60a5fa, #ffffff, #34d399);
+            box-shadow: 0 0 18px rgba(96,165,250,0.75);
+            transition: width 0.18s linear;
+        }
+        .loading-meta {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            font-size: 13px;
+            letter-spacing: 0;
+            color: rgba(255,255,255,0.88);
+        }
+        .loading-percent {
+            font-variant-numeric: tabular-nums;
+        }
+        @keyframes loadingWireSphere {
+            from { transform: rotateX(-12deg) rotateY(0deg); }
+            to { transform: rotateX(-12deg) rotateY(360deg); }
+        }
+
         .custom-modal-overlay {
             position: absolute;
             top: 0;
@@ -476,6 +593,19 @@
 </div>
 
 <div id="viewer"></div>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-backdrop" id="loadingBackdrop"></div>
+    <div class="loading-content">
+        <div class="loading-sphere" aria-hidden="true"></div>
+        <div class="loading-progress">
+            <div class="loading-progress-fill" id="loadingProgressFill"></div>
+        </div>
+        <div class="loading-meta">
+            <span id="loadingText">正在进入场景</span>
+            <span class="loading-percent" id="loadingPercent">0%</span>
+        </div>
+    </div>
+</div>
 <div id="mainSceneBar"></div>
 <div id="bottomSceneDock" class="collapsed">
     <div id="bottomSceneBar"></div>
@@ -512,6 +642,10 @@
     let projectMainId = null;
     let currentAreaId = null;
     let isBottomSceneBarOpen = false;
+    let loadingProgressTimer = null;
+    let loadingAnimationFrame = null;
+    let loadingProgressValue = 0;
+    let activeLoadingId = 0;
 
     const urlParams = new URLSearchParams(window.location.search);
     const initialSceneId = urlParams.get('id');
@@ -544,6 +678,78 @@
         dock.classList.toggle('collapsed', !isBottomSceneBarOpen);
         toggle.title = isBottomSceneBarOpen ? '收起场景列表' : '展开场景列表';
         toggle.setAttribute('aria-label', toggle.title);
+    }
+
+    function setLoadingProgress(value) {
+        loadingProgressValue = Math.max(0, Math.min(100, value));
+        document.getElementById('loadingProgressFill').style.width = `${loadingProgressValue}%`;
+        document.getElementById('loadingPercent').innerText = `${Math.round(loadingProgressValue)}%`;
+    }
+
+    function showSceneLoading(scene) {
+        const loadingId = ++activeLoadingId;
+        const overlay = document.getElementById('loadingOverlay');
+        const backdrop = document.getElementById('loadingBackdrop');
+        const loadingText = document.getElementById('loadingText');
+        const previewUrl = scene.thumb_url || scene.image_url || '';
+
+        clearInterval(loadingProgressTimer);
+        cancelAnimationFrame(loadingAnimationFrame);
+        setLoadingProgress(0);
+        loadingText.innerText = '正在进入场景';
+        backdrop.style.backgroundImage = previewUrl ? `url("${String(previewUrl).replace(/"/g, '%22')}")` : '';
+        overlay.classList.add('active');
+
+        loadingProgressTimer = setInterval(() => {
+            const nextValue = loadingProgressValue + Math.max(0.35, (86 - loadingProgressValue) * 0.045);
+            setLoadingProgress(Math.min(nextValue, 86));
+        }, 90);
+
+        return loadingId;
+    }
+
+    function finishSceneLoading(loadingId) {
+        if (loadingId !== activeLoadingId) return;
+
+        clearInterval(loadingProgressTimer);
+        cancelAnimationFrame(loadingAnimationFrame);
+
+        const overlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const startValue = loadingProgressValue;
+        const startTime = performance.now();
+        const duration = 520;
+
+        loadingText.innerText = '加载完成';
+
+        const animateToComplete = (now) => {
+            if (loadingId !== activeLoadingId) return;
+
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setLoadingProgress(startValue + (100 - startValue) * eased);
+
+            if (progress < 1) {
+                loadingAnimationFrame = requestAnimationFrame(animateToComplete);
+            } else {
+                setTimeout(() => {
+                    if (loadingId === activeLoadingId) overlay.classList.remove('active');
+                }, 180);
+            }
+        };
+
+        loadingAnimationFrame = requestAnimationFrame(animateToComplete);
+    }
+
+    function preloadImage(src) {
+        return new Promise(resolve => {
+            if (!src) return resolve();
+
+            const img = new Image();
+            img.onload = resolve;
+            img.onerror = resolve;
+            img.src = src;
+        });
     }
 
     window.addEventListener('wheel', (e) => {
@@ -588,10 +794,13 @@
 
     window.switchToScene = async (targetId, isFirstLoad = false) => {
         const titleEl = document.getElementById('titleObj');
+        let loadingId = null;
         titleEl.innerText = "正在穿越...";
 
         try {
             const targetScene = projectScenes.find(s => s.id == targetId);
+            loadingId = showSceneLoading(targetScene);
+            const panoramaReady = preloadImage(targetScene.image_url);
             titleEl.innerText = targetScene.title || '全景漫游';
             const targetAreaId = (targetScene.is_group || targetScene.id == projectMainId) ? targetScene.id : targetScene.parent_id;
 
@@ -640,6 +849,8 @@
                     data: { targetId: m.target_scene_id, desc: m.description, title: m.title }
                 };
             });
+
+            await panoramaReady;
 
             if (isFirstLoad || !viewer) {
                 viewer = new Viewer({
@@ -738,7 +949,10 @@
                 indicatorContainer.style.opacity = '0';
                 indicatorContainer.innerHTML = '';
             }
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            finishSceneLoading(loadingId);
         } catch(e) {
+            if (loadingId !== null) finishSceneLoading(loadingId);
             titleEl.innerText = "场景切换失败";
         }
     };
