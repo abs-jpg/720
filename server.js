@@ -102,8 +102,11 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         await connection.end();
         res.json({ success: true, sceneId: result.insertId, imageUrl, originalUrl, thumbUrl });
     } catch (err) {
+        console.error('Upload Error:', err);
         [originalUrl, imageUrl, thumbUrl].forEach(deleteUploadFile);
-        res.status(500).json({ error: 'Upload Error' });
+        res.status(500).json({
+            error: err.message || 'Upload Error'
+        });
     }
 });
 
