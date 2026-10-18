@@ -409,7 +409,7 @@
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            transition: opacity 0.45s ease, visibility 0.45s ease;
+            transition: opacity 0.15s ease, visibility 0.15s ease;
         }
         .loading-overlay.active {
             opacity: 1;
@@ -495,7 +495,7 @@
             border-radius: inherit;
             background: linear-gradient(90deg, #60a5fa, #ffffff, #34d399);
             box-shadow: 0 0 18px rgba(96,165,250,0.75);
-            transition: width 0.18s linear;
+            transition: width 0.08s linear;
         }
         .loading-meta {
             width: 100%;
@@ -633,7 +633,7 @@
     }
 </script>
 <script type="module">
-    import { Viewer } from '@photo-sphere-viewer/core';
+    import { Cache, Viewer } from '@photo-sphere-viewer/core';
     import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
 
     let viewer = null;
@@ -646,6 +646,24 @@
     let loadingAnimationFrame = null;
     let loadingProgressValue = 0;
     let activeLoadingId = 0;
+    let loadingShowTimer = null;
+    let currentSceneId = null;
+    let requestedSceneId = null;
+    let activeSwitchId = 0;
+    let preloadTimer = null;
+    let preloadGeneration = 0;
+    let qualityUpgrade = null;
+    let currentPanoramaUrl = null;
+
+    const sceneDataCache = new Map();
+    const sceneDataRequests = new Map();
+    const panoramaDownloads = new Map();
+    const SCENE_CACHE_TTL = 5 * 60 * 1000;
+    const SCENE_CACHE_LIMIT = 32;
+    const ADJACENT_PRELOAD_LIMIT = 2;
+
+    Cache.maxItems = 6;
+    Cache.ttl = SCENE_CACHE_TTL / 1000;
 
     const urlParams = new URLSearchParams(window.location.search);
     const initialSceneId = urlParams.get('id');
@@ -694,11 +712,15 @@
         const previewUrl = scene.thumb_url || scene.image_url || '';
 
         clearInterval(loadingProgressTimer);
+        clearTimeout(loadingShowTimer);
         cancelAnimationFrame(loadingAnimationFrame);
         setLoadingProgress(0);
         loadingText.innerText = '正在进入场景';
         backdrop.style.backgroundImage = previewUrl ? `url("${String(previewUrl).replace(/"/g, '%22')}")` : '';
-        overlay.classList.add('active');
+        // Avoid flashing the full-screen loader on an already cached scene.
+        loadingShowTimer = setTimeout(() => {
+            if (loadingId === activeLoadingId) overlay.classList.add('active');
+        }, currentSceneId === null ? 0 : 300);
 
         loadingProgressTimer = setInterval(() => {
             const nextValue = loadingProgressValue + Math.max(0.35, (86 - loadingProgressValue) * 0.045);
@@ -708,17 +730,22 @@
         return loadingId;
     }
 
-    function finishSceneLoading(loadingId) {
+    function finishSceneLoading(loadingId, failed = false) {
         if (loadingId !== activeLoadingId) return;
 
         clearInterval(loadingProgressTimer);
+        clearTimeout(loadingShowTimer);
         cancelAnimationFrame(loadingAnimationFrame);
 
         const overlay = document.getElementById('loadingOverlay');
+        if (failed || !overlay.classList.contains('active')) {
+            overlay.classList.remove('active');
+            return;
+        }
         const loadingText = document.getElementById('loadingText');
         const startValue = loadingProgressValue;
         const startTime = performance.now();
-        const duration = 520;
+        const duration = 160;
 
         loadingText.innerText = '加载完成';
 
@@ -732,24 +759,143 @@
             if (progress < 1) {
                 loadingAnimationFrame = requestAnimationFrame(animateToComplete);
             } else {
-                setTimeout(() => {
-                    if (loadingId === activeLoadingId) overlay.classList.remove('active');
-                }, 180);
+                overlay.classList.remove('active');
             }
         };
 
         loadingAnimationFrame = requestAnimationFrame(animateToComplete);
     }
 
-    function preloadImage(src) {
-        return new Promise(resolve => {
-            if (!src) return resolve();
+    function getSceneData(sceneId) {
+        const key = String(sceneId);
+        const cached = sceneDataCache.get(key);
+        if (cached && Date.now() - cached.savedAt < SCENE_CACHE_TTL) {
+            sceneDataCache.delete(key);
+            sceneDataCache.set(key, cached);
+            return Promise.resolve(cached.data);
+        }
+        sceneDataCache.delete(key);
+        if (sceneDataRequests.has(key)) return sceneDataRequests.get(key);
 
-            const img = new Image();
-            img.onload = resolve;
-            img.onerror = resolve;
-            img.src = src;
-        });
+        const request = fetch(`/api/scenes/${encodeURIComponent(key)}`, { cache: 'no-store' })
+            .then(async response => {
+                if (!response.ok) throw new Error(`Scene request failed: ${response.status}`);
+                const data = await response.json();
+                if (!data.success || !data.scene || !Array.isArray(data.markers)) {
+                    throw new Error('Invalid scene data');
+                }
+                sceneDataCache.set(key, { data, savedAt: Date.now() });
+                if (sceneDataCache.size > SCENE_CACHE_LIMIT) {
+                    sceneDataCache.delete(sceneDataCache.keys().next().value);
+                }
+                return data;
+            })
+            .finally(() => sceneDataRequests.delete(key));
+        sceneDataRequests.set(key, request);
+        return request;
+    }
+
+    function cancelAdjacentPreload() {
+        clearTimeout(preloadTimer);
+        preloadGeneration++;
+    }
+
+    function getPreviewUrl(scene) {
+        return scene.preview_url || `/api/scenes/${encodeURIComponent(scene.id)}/preview`;
+    }
+
+    function cancelPanoramaDownloads(keepUrls = []) {
+        const keep = new Set(keepUrls);
+        for (const [url, task] of panoramaDownloads) {
+            if (!keep.has(url)) {
+                panoramaDownloads.delete(url);
+                task.controller.abort();
+            }
+        }
+    }
+
+    function downloadPanorama(url) {
+        if (Cache.get(url, url)) return Promise.resolve();
+        if (panoramaDownloads.has(url)) return panoramaDownloads.get(url).promise;
+
+        const controller = new AbortController();
+        const task = { controller, promise: null };
+        task.promise = fetch(url, { signal: controller.signal })
+            .then(response => {
+                if (!response.ok) throw new Error(`Panorama request failed: ${response.status}`);
+                return response.blob();
+            })
+            .then(blob => {
+                if (controller.signal.aborted) throw new Error('Panorama request cancelled');
+                Cache.add(url, url, blob);
+            })
+            .finally(() => {
+                if (panoramaDownloads.get(url) === task) panoramaDownloads.delete(url);
+            });
+        panoramaDownloads.set(url, task);
+        return task.promise;
+    }
+
+    async function upgradePanoramaQuality(scene, switchId) {
+        try {
+            // Download first, so view changes made during loading remain untouched.
+            await downloadPanorama(scene.image_url);
+            if (switchId !== activeSwitchId || currentSceneId !== String(scene.id)) return;
+            const previewData = viewer.state.textureData.panoData;
+            const completed = await viewer.setPanorama(scene.image_url, {
+                showLoader: false,
+                transition: { speed: 180, rotation: false, effect: 'fade' },
+                // Carry over projection/pose, but never reapply an initial camera view.
+                panoData: image => {
+                    const scaleX = image.width / previewData.croppedWidth;
+                    const scaleY = image.height / previewData.croppedHeight;
+                    return {
+                        ...previewData,
+                        fullWidth: Math.round(previewData.fullWidth * scaleX),
+                        fullHeight: Math.round(previewData.fullHeight * scaleY),
+                        croppedWidth: image.width,
+                        croppedHeight: image.height,
+                        croppedX: Math.round(previewData.croppedX * scaleX),
+                        croppedY: Math.round(previewData.croppedY * scaleY),
+                        initialHeading: null, initialPitch: null, initialFov: null
+                    };
+                }
+            });
+            if (completed && switchId === activeSwitchId) currentPanoramaUrl = scene.image_url;
+        } catch (error) {
+            if (switchId !== activeSwitchId) return;
+            Cache.remove(scene.image_url, scene.image_url);
+            viewer.hideError();
+            console.warn('Keeping preview; full panorama unavailable:', error.message);
+        }
+    }
+
+    function scheduleAdjacentPreload(scene, markers) {
+        cancelAdjacentPreload();
+        const connection = navigator.connection;
+        if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || '')) return;
+
+        const linkedIds = [...new Set(markers
+            .filter(marker => marker.target_scene_id)
+            .map(marker => String(marker.target_scene_id)))];
+        const candidates = linkedIds
+            .map(id => projectScenes.find(item => String(item.id) === id))
+            .filter(item => item && item.id != scene.id && item.image_url)
+            .slice(0, ADJACENT_PRELOAD_LIMIT);
+        const generation = preloadGeneration;
+
+        // Warm both small previews before spending bandwidth on full panoramas.
+        preloadTimer = setTimeout(async () => {
+            for (const previewOnly of [true, false]) {
+                for (const target of candidates) {
+                    if (generation !== preloadGeneration || requestedSceneId !== null) return;
+                    if (previewOnly) getSceneData(target.id).catch(() => {});
+                    if (Cache.get(target.image_url, target.image_url)) continue;
+                    const url = previewOnly ? getPreviewUrl(target) : target.image_url;
+                    await downloadPanorama(url).catch(() => {});
+                }
+            }
+        }, 600);
     }
 
     window.addEventListener('wheel', (e) => {
@@ -793,25 +939,97 @@
     }
 
     window.switchToScene = async (targetId, isFirstLoad = false) => {
+        const sceneKey = String(targetId);
+        if (sceneKey === requestedSceneId || (sceneKey === currentSceneId && requestedSceneId === null)) return;
+
         const titleEl = document.getElementById('titleObj');
+        const switchId = ++activeSwitchId;
+        requestedSceneId = sceneKey;
+        cancelAdjacentPreload();
         let loadingId = null;
         titleEl.innerText = "正在穿越...";
 
         try {
             const targetScene = projectScenes.find(s => s.id == targetId);
+            if (!targetScene?.image_url) throw new Error('Scene not found');
+            const previewUrl = getPreviewUrl(targetScene);
+            cancelPanoramaDownloads([previewUrl, targetScene.image_url]);
             loadingId = showSceneLoading(targetScene);
-            const panoramaReady = preloadImage(targetScene.image_url);
-            titleEl.innerText = targetScene.title || '全景漫游';
-            const targetAreaId = (targetScene.is_group || targetScene.id == projectMainId) ? targetScene.id : targetScene.parent_id;
-
-            if (isFirstLoad || targetAreaId !== currentAreaId) {
-                currentAreaId = targetAreaId;
-                renderMainSceneBar();
+            if (!viewer) {
+                viewer = new Viewer({
+                    container: document.querySelector('#viewer'),
+                    defaultZoomLvl: 0,
+                    navbar: [
+                        'autorotate',
+                        'zoom',
+                        {
+                            id: 'download',
+                            title: '下载原图',
+                            content: '<svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor; transform: translateY(2px);"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
+                            onClick: () => {
+                                const scene = projectScenes.find(item => String(item.id) === currentSceneId);
+                                if (!scene) return;
+                                const old = titleEl.innerText;
+                                titleEl.innerText = "⬇️ 正在拉取原图...";
+                                fetch(scene.original_url || scene.image_url)
+                                    .then(r => r.blob())
+                                    .then(b => {
+                                        const url = URL.createObjectURL(b);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = scene.title + '.jpg';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        URL.revokeObjectURL(url);
+                                        a.remove();
+                                        titleEl.innerText = old;
+                                    });
+                            }
+                        },
+                        'fullscreen'
+                    ],
+                    plugins: [[MarkersPlugin, { markers: [] }]]
+                });
+                markersPlugin = viewer.getPlugin(MarkersPlugin);
+                markersPlugin.addEventListener('select-marker', (e, marker) => {
+                    const m = marker || e.marker;
+                    if (m.data.targetId) window.switchToScene(m.data.targetId);
+                });
             }
-            renderBottomBar(targetId);
 
-            const mRes = await fetch(`/api/scenes/${targetId}`);
-            const mData = await mRes.json();
+            const panoramaReady = (async () => {
+                const initialUrl = Cache.get(targetScene.image_url, targetScene.image_url)
+                    ? targetScene.image_url : previewUrl;
+                const options = {
+                    showLoader: false,
+                    transition: isFirstLoad || currentSceneId === null
+                        ? false
+                        : { speed: 250, rotation: false, effect: 'fade' }
+                };
+                try {
+                    const pending = panoramaDownloads.get(initialUrl);
+                    if (pending) await pending.promise;
+                    if (switchId !== activeSwitchId) return { completed: false };
+                    const completed = await viewer.setPanorama(initialUrl, options);
+                    return { completed, url: initialUrl };
+                } catch (error) {
+                    if (initialUrl === targetScene.image_url || switchId !== activeSwitchId) throw error;
+                    // Old deployments or missing previews still load the existing image.
+                    const pending = panoramaDownloads.get(targetScene.image_url);
+                    if (pending) await pending.promise;
+                    if (switchId !== activeSwitchId) return { completed: false };
+                    const completed = await viewer.setPanorama(targetScene.image_url, options);
+                    return { completed, url: targetScene.image_url };
+                }
+            })();
+            const [sceneResult, panoramaResult] = await Promise.allSettled([
+                getSceneData(targetId), panoramaReady
+            ]);
+            if (switchId !== activeSwitchId) return;
+            if (sceneResult.status === 'rejected') throw sceneResult.reason;
+            if (panoramaResult.status === 'rejected') throw panoramaResult.reason;
+            if (!panoramaResult.value.completed) throw new Error('Panorama loading interrupted');
+            const mData = sceneResult.value;
 
             const formattedMarkers = mData.markers.map(m => {
                 let targetName = m.title;
@@ -850,59 +1068,21 @@
                 };
             });
 
-            await panoramaReady;
-
-            if (isFirstLoad || !viewer) {
-                viewer = new Viewer({
-                    container: document.querySelector('#viewer'),
-                    panorama: targetScene.image_url,
-                    defaultZoomLvl: 0,
-                    navbar: [
-                        'autorotate',
-                        'zoom',
-                        {
-                            id: 'download',
-                            title: '下载原图',
-                            content: '<svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor; transform: translateY(2px);"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
-                            onClick: (v) => {
-                                const old = titleEl.innerText;
-                                titleEl.innerText = "⬇️ 正在拉取原图...";
-                                fetch(targetScene.original_url || targetScene.image_url)
-                                    .then(r => r.blob())
-                                    .then(b => {
-                                        const url = URL.createObjectURL(b);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = (targetScene.title) + '.jpg';
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        URL.revokeObjectURL(url);
-                                        a.remove();
-                                        titleEl.innerText = old;
-                                    });
-                            }
-                        },
-                        'fullscreen'
-                    ],
-                    plugins: [
-                        [MarkersPlugin, { markers: formattedMarkers }]
-                    ]
-                });
-
-                markersPlugin = viewer.getPlugin(MarkersPlugin);
-                markersPlugin.addEventListener('select-marker', (e, marker) => {
-                    const m = marker || e.marker;
-                    if (m.data.targetId) {
-                        window.switchToScene(m.data.targetId);
-                    }
-                });
-            } else {
-                await viewer.setPanorama(targetScene.image_url);
-                markersPlugin.setMarkers(formattedMarkers);
-            }
+            markersPlugin.setMarkers(formattedMarkers);
+            currentSceneId = sceneKey;
+            currentPanoramaUrl = panoramaResult.value.url;
+            requestedSceneId = null;
+            titleEl.innerText = targetScene.title || '全景漫游';
+            currentAreaId = (targetScene.is_group || targetScene.id == projectMainId) ? targetScene.id : targetScene.parent_id;
+            renderMainSceneBar();
+            renderBottomBar(targetId);
 
             const jumpMarkers = formattedMarkers.filter(m => m.data.targetId);
             const indicatorContainer = document.getElementById('directionIndicator');
+            if (window.currentCompassTracker) {
+                viewer.removeEventListener('position-updated', window.currentCompassTracker);
+                window.currentCompassTracker = null;
+            }
 
             if (jumpMarkers.length > 0) {
                 indicatorContainer.style.opacity = '1';
@@ -920,10 +1100,6 @@
                     indicatorContainer.appendChild(ptr);
                     return { element: ptr, targetYaw: marker.position.yaw };
                 });
-
-                if (window.currentCompassTracker) {
-                    viewer.removeEventListener('position-updated', window.currentCompassTracker);
-                }
 
                 window.currentCompassTracker = () => {
                     const currentYaw = viewer.getPosition().yaw;
@@ -950,10 +1126,36 @@
                 indicatorContainer.innerHTML = '';
             }
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            if (switchId !== activeSwitchId) return;
             finishSceneLoading(loadingId);
+            if (currentPanoramaUrl !== targetScene.image_url) {
+                const task = { promise: null };
+                task.promise = upgradePanoramaQuality(targetScene, switchId).finally(() => {
+                    if (qualityUpgrade === task) qualityUpgrade = null;
+                    if (switchId === activeSwitchId && requestedSceneId === null) {
+                        scheduleAdjacentPreload(targetScene, mData.markers);
+                    }
+                });
+                qualityUpgrade = task;
+            } else {
+                scheduleAdjacentPreload(targetScene, mData.markers);
+            }
         } catch(e) {
-            if (loadingId !== null) finishSceneLoading(loadingId);
+            if (switchId !== activeSwitchId) return;
+            currentSceneId = null;
+            currentPanoramaUrl = null;
+            cancelPanoramaDownloads();
+            finishSceneLoading(loadingId ?? activeLoadingId, true);
+            if (markersPlugin) markersPlugin.clearMarkers();
+            if (window.currentCompassTracker) {
+                viewer.removeEventListener('position-updated', window.currentCompassTracker);
+                window.currentCompassTracker = null;
+            }
+            document.getElementById('directionIndicator').style.opacity = '0';
             titleEl.innerText = "场景切换失败";
+            console.error('Scene switch failed:', e);
+        } finally {
+            if (switchId === activeSwitchId) requestedSceneId = null;
         }
     };
 

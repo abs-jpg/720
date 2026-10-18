@@ -5,6 +5,7 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const sharp = require('sharp');
+const { createPreviewStore } = require('./preview');
 
 const app = express();
 app.use(cors());
@@ -28,6 +29,7 @@ const thumbDir = path.join(uploadRoot, 'thumb');
 [uploadRoot, originalDir, panoDir, thumbDir].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+const previewStore = createPreviewStore(uploadRoot);
 
 // 数据库配置
 const dbConfig = { host: 'xxxxx', user: 'zxczcx', password: 'qweqwe', database: 'asda' };
@@ -96,6 +98,10 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
             .jpeg({ quality: 76, mozjpeg: true })
             .toFile(thumbPath);
 
+        await previewStore.ensurePreview(imageUrl).catch(err => {
+            console.warn('Preview generation deferred:', err.message);
+        });
+
         const connection = await mysql.createConnection(dbConfig);
         let title = parentId ? (isGroup ? '新区域(如二楼)' : '新房间') : '我的全景项目';
         const [result] = await connection.execute('INSERT INTO scenes (image_url, original_url, thumb_url, title, owner_id, parent_id, is_group) VALUES (?, ?, ?, ?, ?, ?, ?)', [imageUrl, originalUrl, thumbUrl, title, ownerId, parentId, isGroup]);
@@ -103,10 +109,30 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         res.json({ success: true, sceneId: result.insertId, imageUrl, originalUrl, thumbUrl });
     } catch (err) {
         console.error('Upload Error:', err);
+        await previewStore.removePreview(imageUrl).catch(() => {});
         [originalUrl, imageUrl, thumbUrl].forEach(deleteUploadFile);
         res.status(500).json({
             error: err.message || 'Upload Error'
         });
+    }
+});
+
+// Existing scenes get a preview on demand; no database migration is required.
+app.get('/api/scenes/:id/preview', async (req, res) => {
+    let connection;
+    try {
+        connection = await mysql.createConnection(dbConfig);
+        const [scenes] = await connection.execute('SELECT image_url FROM scenes WHERE id = ?', [req.params.id]);
+        await connection.end();
+        connection = null;
+        if (!scenes.length) return res.status(404).json({ error: 'Not Found' });
+        const previewPath = await previewStore.ensurePreview(scenes[0].image_url);
+        res.sendFile(previewPath, { maxAge: '1d' });
+    } catch (err) {
+        console.warn('Preview unavailable:', err.message);
+        res.status(404).json({ error: 'Preview unavailable' });
+    } finally {
+        if (connection) await connection.end().catch(() => {});
     }
 });
 
@@ -194,9 +220,12 @@ app.delete('/api/scenes/:id', async (req, res) => {
         const pId = req.params.id;
         const [allScenes] = await connection.execute(`SELECT id, image_url, original_url, thumb_url FROM scenes WHERE (id = ? OR parent_id = ? OR parent_id IN (SELECT id FROM (SELECT id FROM scenes WHERE parent_id = ? AND is_group = 1) AS t)) AND owner_id = ?`, [pId, pId, pId, ownerId]);
         if (allScenes.length === 0) { await connection.end(); return res.json({ success: false }); }
-        allScenes.forEach(s => {
+        for (const s of allScenes) {
+            await previewStore.removePreview(s.image_url).catch(err => {
+                console.warn('Preview cleanup failed:', err.message);
+            });
             [s.image_url, s.original_url, s.thumb_url].forEach(deleteUploadFile);
-        });
+        }
         const deleteIds = allScenes.map(s => s.id);
         if (deleteIds.length > 0) {
             const placeholders = deleteIds.map(() => '?').join(',');
